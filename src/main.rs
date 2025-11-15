@@ -1,34 +1,20 @@
-use pigpio_sys::*;
-use std::{thread, time::Duration};
+use rppal::gpio::Gpio;
 
-fn main() {
-    unsafe {
-        // Start pigpio in "library mode"
-        if gpioInitialise() < 0 {
-            panic!("Failed to initialise pigpio");
-        }
+fn main() -> rppal::gpio::Result<()> {
+    let l_pin = Gpio::new()?.get(19)?.into_input();
+    let m_pin = Gpio::new()?.get(16)?.into_input();
+    let r_pin = Gpio::new()?.get(20)?.into_input();
 
-        let ldr_left_pin = 19;
-        let ldr_middle_pin = 16;
-        let ldr_right_pin = 20;
+    loop {
+        let l_pin_level = l_pin.read();
+        println!("LEFT LDR value: {:?}", l_pin_level);
 
-        gpioSetMode(ldr_left_pin, PI_INPUT);
-        gpioSetMode(ldr_middle_pin, PI_INPUT);
-        gpioSetMode(ldr_right_pin, PI_INPUT);
+        let m_pin_level = m_pin.read();
+        println!("MIDDLE LDR value: {:?}", m_pin_level);
 
-        println!("LDR LEFT started on GPIO{}", ldr_left_pin);
-        println!("LDR MIDDLE started on GPIO{}", ldr_middle_pin);
-        println!("LDR RIGHT started on GPIO{}", ldr_right_pin);
+        let r_pin_level = r_pin.read();
+        println!("RIGHT LDR value: {:?}", r_pin_level);
 
-        loop {
-            let ldr_left_level = gpioRead(ldr_left_pin);
-            let ldr_middle_level = gpioRead(ldr_middle_pin);
-            let ldr_right_level = gpioRead(ldr_right_pin);
-            println!("LDR LEFT level: {}", ldr_left_pin);
-            println!("LDR MIDDLE level: {}", ldr_middle_pin);
-            println!("LDR RIGHT level: {}", ldr_right_pin);
-
-            thread::sleep(Duration::from_millis(500));
-        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
     }
 }

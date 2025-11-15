@@ -1,7 +1,0 @@
-[build]
-# Use this target if none is explicitly provided
-default-target = "aarch64-unknown-linux-gnu"
-pre-build = [
-  # Add any pre-build commands here
-  # Like installing dependencies for any crates you're using
-]
