@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use rppal::gpio::{Gpio, InputPin, Level, OutputPin};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
@@ -24,15 +25,15 @@ struct UltrasoundSensor {
 }
 
 impl UltrasoundSensor {
-    pub fn new(trig_pin: u8, echo_pin: u8) -> Self {
-        let gpio = Gpio::new().unwrap();
+    pub fn new(trig_pin: u8, echo_pin: u8) -> Result<UltrasoundSensor> {
+        let gpio = Gpio::new().context("Failed to initialize GPIO")?;
 
-        Self {
-            trig: gpio.get(trig_pin).unwrap().into_output_low(),
-            echo: gpio.get(echo_pin).unwrap().into_input_pulldown(),
+        Ok(Self {
+            trig: gpio.get(trig_pin)?.into_output_low(),
+            echo: gpio.get(echo_pin)?.into_input_pulldown(),
             max_wait: Duration::from_micros(25_000), // 25ms = max sensor timeout
             speed_of_sound: 343.0,                   // m/s @ ~20 deg c
-        }
+        })
     }
 
     fn measure_cm(&mut self) -> Option<u16> {
@@ -71,10 +72,20 @@ impl UltrasoundSensor {
     }
 }
 
-fn ldr(state: Arc<Mutex<RobotState>>) {
-    let l_pin = Gpio::new().unwrap().get(19).unwrap().into_input();
-    let m_pin = Gpio::new().unwrap().get(16).unwrap().into_input();
-    let r_pin = Gpio::new().unwrap().get(20).unwrap().into_input();
+fn ldr(state: Arc<Mutex<RobotState>>) -> Result<()> {
+    let gpio = Gpio::new().context("Failed to initialize GPIO")?;
+    let l_pin = gpio
+        .get(19)
+        .context("Failed to obtain pin 19")?
+        .into_input();
+    let m_pin = gpio
+        .get(16)
+        .context("Failed to obtain pin 16")?
+        .into_input();
+    let r_pin = gpio
+        .get(20)
+        .context("Failed to obtain pin 20")?
+        .into_input();
 
     loop {
         let l_pin_level = l_pin.read();
@@ -155,7 +166,7 @@ async fn main() {
     //
     {
         let state = Arc::clone(&state);
-        let mut us_sensor = UltrasoundSensor::new(11, 8);
+        let mut us_sensor = UltrasoundSensor::new(11, 8).unwrap();
 
         task::spawn_blocking(move || {
             loop {
