@@ -1,8 +1,9 @@
-use anyhow::{Context, Result};
-use rppal::gpio::{Gpio, InputPin, Level, OutputPin};
+mod hal;
+use hal::ldr::Ldr;
+use hal::motor::Motor;
+use hal::ultrasound::UltrasoundSensor;
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tokio::task;
@@ -15,129 +16,6 @@ struct RobotState {
     ldr_right_value: u8,
     ultrasound_distance: u16,
     last_cmd: String,
-}
-
-struct Motor {
-    in1: OutputPin,
-    in2: OutputPin,
-    en: OutputPin,
-}
-
-impl Motor {
-    pub fn new(in1: u8, in2: u8, en: u8) -> Result<Motor> {
-        let gpio = Gpio::new().context("Failed to initialize GPIO")?;
-        let in1 = gpio.get(in1)?.into_output_low();
-        let in2 = gpio.get(in2)?.into_output_low();
-        let mut en = gpio.get(en)?.into_output();
-        en.set_pwm_frequency(1000.0, 1.0)?;
-
-        Ok(Self { in1, in2, en })
-    }
-
-    pub fn forward(&mut self, speed: u8 /* 0..100 */) -> Result<()> {
-        self.in1.set_high();
-        self.in2.set_low();
-        let duty_cycle = speed as f64 / 100.0;
-        Ok(self.en.set_pwm_frequency(1000.0, duty_cycle)?)
-    }
-
-    pub fn backward(&mut self, speed: u8 /* 0..100 */) -> Result<()> {
-        self.in1.set_low();
-        self.in2.set_high();
-        let duty_cycle = speed as f64 / 100.0;
-        Ok(self.en.set_pwm_frequency(1000.0, duty_cycle)?)
-    }
-}
-
-struct UltrasoundSensor {
-    trig: OutputPin,
-    echo: InputPin,
-    max_wait: Duration,
-    speed_of_sound: f32,
-}
-
-impl UltrasoundSensor {
-    pub fn new(trig_pin: u8, echo_pin: u8) -> Result<UltrasoundSensor> {
-        let gpio = Gpio::new().context("Failed to initialize GPIO")?;
-
-        Ok(Self {
-            trig: gpio.get(trig_pin)?.into_output_low(),
-            echo: gpio.get(echo_pin)?.into_input_pulldown(),
-            max_wait: Duration::from_micros(25_000), // 25ms = max sensor timeout
-            speed_of_sound: 343.0,                   // m/s @ ~20 deg c
-        })
-    }
-
-    fn measure_cm(&mut self) -> Option<u16> {
-        // Trigger pulse
-        self.trig.set_low();
-        std::thread::sleep(Duration::from_micros(2));
-
-        self.trig.set_high();
-        std::thread::sleep(Duration::from_micros(10));
-        self.trig.set_low();
-
-        // Wait for echo to go high
-        let start_wait = Instant::now();
-        while self.echo.read() == Level::Low {
-            if start_wait.elapsed() > self.max_wait {
-                return None; // no wait
-            }
-        }
-
-        // Echo High, start timing pulse
-        let pulse_start = Instant::now();
-        while self.echo.read() == Level::High {
-            if pulse_start.elapsed() > self.max_wait {
-                return None;
-            }
-        }
-
-        let pulse_duration = pulse_start.elapsed();
-
-        // Convert pulse time to distance
-        let secs = pulse_duration.as_secs_f32();
-
-        let distance_cm = (secs * self.speed_of_sound * 100.0) / 2.0;
-
-        return Some(distance_cm as u16);
-    }
-}
-
-fn ldr(state: Arc<Mutex<RobotState>>) -> Result<()> {
-    let gpio = Gpio::new().context("Failed to initialize GPIO")?;
-    let l_pin = gpio
-        .get(19)
-        .context("Failed to obtain pin 19")?
-        .into_input();
-    let m_pin = gpio
-        .get(16)
-        .context("Failed to obtain pin 16")?
-        .into_input();
-    let r_pin = gpio
-        .get(20)
-        .context("Failed to obtain pin 20")?
-        .into_input();
-
-    loop {
-        let l_pin_level = l_pin.read();
-        let m_pin_level = m_pin.read();
-        let r_pin_level = r_pin.read();
-
-        {
-            let mut s = state.lock().unwrap();
-            s.ldr_left_value = l_pin_level as u8;
-            s.ldr_middle_value = m_pin_level as u8;
-            s.ldr_right_value = r_pin_level as u8;
-        }
-
-        println!(
-            "LDR left: {:?}, middle: {:?}, right: {:?}",
-            l_pin_level, m_pin_level, r_pin_level
-        );
-
-        std::thread::sleep(std::time::Duration::from_millis(1000));
-    }
 }
 
 async fn socket_responder(sock_path: &str, state: Arc<Mutex<RobotState>>) -> anyhow::Result<()> {
@@ -178,7 +56,20 @@ async fn main() {
     //
     {
         let state = Arc::clone(&state);
-        task::spawn_blocking(move || ldr(state));
+        let ldr_sensor = Ldr::new(19, 16, 20).unwrap();
+
+        task::spawn_blocking(move || {
+            loop {
+                let (l_val, m_val, r_val) = ldr_sensor.readings();
+                let mut s = state.lock().unwrap();
+
+                s.ldr_left_value = l_val;
+                s.ldr_middle_value = m_val;
+                s.ldr_right_value = r_val;
+
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        });
     }
 
     //
