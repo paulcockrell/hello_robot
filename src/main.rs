@@ -1,8 +1,10 @@
 mod hal;
 use hal::ldr::Ldr;
 use hal::motor::Motor;
+use hal::servo::Servo;
 use hal::ultrasound::UltrasoundSensor;
 use serde::Deserialize;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
@@ -51,15 +53,23 @@ async fn main() {
         last_cmd: "none".into(),
     }));
 
+    let shutdown = Arc::new(AtomicBool::new(false));
+
     //
     // Task A - LDR polling
     //
     {
         let state = Arc::clone(&state);
+        let shutdown = shutdown.clone();
         let ldr_sensor = Ldr::new(19, 16, 20).unwrap();
 
         task::spawn_blocking(move || {
             loop {
+                if shutdown.load(Ordering::SeqCst) {
+                    println!("Exiting LDR thread");
+                    break;
+                }
+
                 let (l_val, m_val, r_val) = ldr_sensor.readings();
                 let mut s = state.lock().unwrap();
 
@@ -89,10 +99,16 @@ async fn main() {
     //
     {
         let state = Arc::clone(&state);
+        let shutdown = shutdown.clone();
         let mut us_sensor = UltrasoundSensor::new(11, 8).unwrap();
 
         task::spawn_blocking(move || {
             loop {
+                if shutdown.load(Ordering::SeqCst) {
+                    println!("Exiting Ultrasound thread");
+                    break;
+                }
+
                 {
                     let mut s = state.lock().unwrap();
                     s.ultrasound_distance = us_sensor.measure_cm().unwrap_or(0);
@@ -105,13 +121,20 @@ async fn main() {
 
     //
     // Task D - Motor controller
+    //
     {
+        let shutdown = shutdown.clone();
         let mut motors_left = Motor::new(26, 21, 4).unwrap();
         let mut motors_right = Motor::new(27, 18, 17).unwrap();
         let speed = 100;
 
         task::spawn_blocking(move || {
             loop {
+                if shutdown.load(Ordering::SeqCst) {
+                    println!("Exiting Motor thread");
+                    break;
+                }
+
                 let _ = motors_left.forward(speed);
                 let _ = motors_right.forward(speed);
                 std::thread::sleep(Duration::from_millis(2000));
@@ -123,13 +146,63 @@ async fn main() {
     }
 
     //
-    // Task E - Global robot logic loop
+    // Task E - Servo controller
     //
-    loop {
-        let s = state.lock().unwrap();
-        println!("ROBOT STATE: {:?}", *s);
-        drop(s);
+    {
+        let shutdown = shutdown.clone();
 
-        sleep(Duration::from_secs(1)).await;
+        let mut servo = Servo::new(0x40).unwrap();
+        servo.set_pwm_freq(50.0);
+
+        let min_ang = 300;
+        let max_ang = 150;
+        let mut cur_ang = 50;
+
+        task::spawn_blocking(move || {
+            loop {
+                if shutdown.load(Ordering::SeqCst) {
+                    println!("Exiting Servo thread");
+                    break;
+                }
+
+                // set channel 0 to 50%
+                servo.set_angle(0, cur_ang, min_ang, max_ang);
+                if cur_ang < 100 {
+                    cur_ang += 1;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        });
+    }
+
+    //
+    // Task F - Handle program termination
+    //
+    {
+        let shutdown = shutdown.clone();
+        tokio::spawn(async move {
+            tokio::signal::ctrl_c().await.unwrap();
+            shutdown.store(true, Ordering::SeqCst);
+        });
+    }
+
+    //
+    // Task F - Global robot logic loop
+    //
+    {
+        let shutdown = shutdown.clone();
+
+        loop {
+            if shutdown.load(Ordering::SeqCst) {
+                println!("Exiting main thread");
+                break;
+            }
+
+            let s = state.lock().unwrap();
+            println!("ROBOT STATE: {:?}", *s);
+            drop(s);
+
+            sleep(Duration::from_secs(1)).await;
+        }
     }
 }

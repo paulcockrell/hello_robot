@@ -1,22 +1,26 @@
 # LDR POC
 
-POC for using Rust and PIGPIO to read LDR sensors on a RaspberryPI 4B
+POC for using Rust and PIGPIO to read LDR sensors on a RaspberryPI >= 4
 
 ## PI Setup
 
 You must be running 64 Bit image (Trixie) for these steps to work.
 
-### PIGPIO
+```bash
+sudo nano /boot/firmware/config.txt
+```
 
-Instal PIGPIO from source, it no longer ships with the RPI image
+add the following:
 
 ```bash
-sudo apt update
-sudo apt install gcc make git
-git clone https://github.com/joan2937/pigpio.git
-cd pigpio
-make
-sudo make install
+dtparam=i2c_arm=on
+dtoverlay=i2c1,pins_2_3
+```
+
+Reboot the RPI
+
+```bash
+sudo reboot
 ```
 
 ## Mac setup

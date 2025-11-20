@@ -32,3 +32,11 @@ impl Motor {
         Ok(self.en.set_pwm_frequency(1000.0, duty_cycle)?)
     }
 }
+
+impl Drop for Motor {
+    fn drop(&mut self) {
+        self.in1.set_low();
+        self.in2.set_low();
+        self.en.set_pwm_frequency(0.0, 0.0).unwrap();
+    }
+}
