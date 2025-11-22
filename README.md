@@ -77,3 +77,20 @@ scp target/aarch64-unknown-linux-gnu/release/<your-program> \
 ```
 
 _(Change the RaspberryPI username and host and path if needed.)_
+
+## Send commands to ROS
+
+The Robot Operating System is listening on a Unix socket, so you can issue commands to it like so:
+
+```bash
+echo '{"type": "servo", "angle": 60}' | socat - UNIX-CONNECT:/tmp/robot.sock
+```
+
+Available commands:
+
+```bash
+{"type": "motor", "direction": "forward", "speed": 100}
+{"type": "servo", "angle": 60}
+{"type": "led", "r": 255, "g": 80, "b": 0}
+{"type": "camera", "command": "snap"}
+```
