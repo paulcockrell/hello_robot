@@ -5,8 +5,8 @@ use hal::servo::Servo;
 use hal::ultrasound::UltrasoundSensor;
 
 use serde::Deserialize;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
 
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
@@ -47,14 +47,6 @@ enum Command {
     Camera { command: String },
 }
 
-#[derive(Debug)]
-struct RobotState {
-    ldr_left_value: u8,
-    ldr_middle_value: u8,
-    ldr_right_value: u8,
-    ultrasound_distance: u16,
-}
-
 async fn socket_responder(path: &str, command_tx: mpsc::Sender<String>) -> anyhow::Result<()> {
     let _ = std::fs::remove_file(path);
     let listener = UnixListener::bind(path)?;
@@ -82,10 +74,10 @@ async fn main() {
     let (command_tx, mut command_rx) = mpsc::channel::<String>(32);
 
     {
-        let shutdown = shutdown.clone();
-        let mut ldr = Ldr::new(19, 16, 20).unwrap();
-
         println!("Starting LDR thread");
+
+        let shutdown = shutdown.clone();
+        let ldr = Ldr::new(19, 16, 20).unwrap();
 
         task::spawn_blocking(move || {
             let mut last_reading: (u8, u8, u8) = (0, 0, 0);
@@ -105,24 +97,56 @@ async fn main() {
         });
     }
 
-    {
-        let shutdown = shutdown.clone();
-        let mut us = UltrasoundSensor::new(11, 8).unwrap();
+    let (servo_tx, mut servo_rx) = mpsc::channel::<Command>(16);
 
-        println!("Starting Ultrasound thread");
+    {
+        println!("Starting Servo thread");
+
+        let shutdown = shutdown.clone();
+        let mut servo = Servo::new().unwrap();
+
+        let min_pulse: u16 = 150;
+        let max_pulse: u16 = 600;
 
         task::spawn_blocking(move || {
+            while !shutdown.load(Ordering::SeqCst) {
+                if let Some(cmd) = servo_rx.blocking_recv() {
+                    if let Command::Servo { angle } = cmd {
+                        let new_angle = if angle <= 180 { angle } else { 0 };
+                        let _ = servo.set_angle(new_angle);
+                    }
+                }
+            }
+
+            println!("Exiting Servo thread");
+        });
+    }
+
+    {
+        println!("Starting Ultrasound thread");
+
+        let shutdown = shutdown.clone();
+        let mut us = UltrasoundSensor::new(11, 8).unwrap();
+        let tx = servo_tx.clone();
+
+        tokio::spawn(async move {
             let mut last_reading = 0u16;
 
             while !shutdown.load(Ordering::SeqCst) {
                 let dist = us.measure_cm().unwrap_or(0);
+                let angle = dist.clamp(0, 100) as u8;
 
                 if dist != last_reading {
                     println!("Ultrasound changed: {}", dist);
+
                     last_reading = dist;
+
+                    if let Err(e) = tx.send(Command::Servo { angle }).await {
+                        eprintln!("Servo send failed: {}", e);
+                    }
                 }
 
-                std::thread::sleep(Duration::from_millis(200));
+                std::thread::sleep(Duration::from_millis(100));
             }
 
             println!("Exiting Ultrasound thread");
@@ -132,6 +156,8 @@ async fn main() {
     let (motor_tx, mut motor_rx) = mpsc::channel::<Command>(16);
 
     {
+        println!("Starting Motor thread");
+
         let shutdown = shutdown.clone();
         let mut left = Motor::new(26, 21, 4).unwrap();
         let mut right = Motor::new(27, 18, 17).unwrap();
@@ -166,30 +192,7 @@ async fn main() {
                 }
             }
 
-            println!("Exiting Motor task");
-        });
-    }
-
-    let (servo_tx, mut servo_rx) = mpsc::channel::<Command>(16);
-
-    {
-        let shutdown = shutdown.clone();
-        let mut servo = Servo::new(0x40).unwrap();
-        servo.set_pwm_freq(50.0);
-
-        let min_pulse = 100;
-        let max_pulse = 560;
-
-        task::spawn_blocking(move || {
-            while !shutdown.load(Ordering::SeqCst) {
-                if let Some(cmd) = servo_rx.blocking_recv() {
-                    if let Command::Servo { angle } = cmd {
-                        servo.set_angle(0, angle, min_pulse, max_pulse);
-                    }
-                }
-            }
-
-            println!("Exiting Servo task");
+            println!("Exiting Motor thread");
         });
     }
 
@@ -203,29 +206,38 @@ async fn main() {
     }
 
     {
+        println!("Starting Command thread");
+
         let shutdown = shutdown.clone();
 
         tokio::spawn(async move {
             while !shutdown.load(Ordering::SeqCst) {
                 if let Some(raw) = command_rx.recv().await {
-                    let cmd: Command = serde_json::from_str(&raw).unwrap();
-
-                    match &cmd {
-                        Command::Motor { .. } => {
-                            motor_tx.send(cmd).await.unwrap();
+                    let cmd: Result<Command, _> = serde_json::from_str(&raw);
+                    match cmd {
+                        Ok(cmd) => {
+                            match &cmd {
+                                Command::Motor { .. } => {
+                                    motor_tx.send(cmd).await.unwrap();
+                                }
+                                Command::Servo { .. } => {
+                                    servo_tx.send(cmd).await.unwrap();
+                                }
+                                Command::Led { .. } => {
+                                    // TODO: add LED task
+                                }
+                                Command::Camera { .. } => {
+                                    // TODO: camera task
+                                }
+                            }
                         }
-                        Command::Servo { .. } => {
-                            servo_tx.send(cmd).await.unwrap();
-                        }
-                        Command::Led { .. } => {
-                            // TODO: add LED task
-                        }
-                        Command::Camera { .. } => {
-                            // TODO: camera task
+                        Err(e) => {
+                            eprintln!("invalid JSON command: {e}");
                         }
                     }
                 }
             }
+            println!("Exiting Command thread");
         });
     }
 

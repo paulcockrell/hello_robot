@@ -37,7 +37,8 @@ name = "ldr_poc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "rppal",
+ "pca9685-rppal",
+ "rppal 0.14.1",
  "serde",
  "serde_json",
  "tokio",
@@ -99,6 +100,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pca9685-rppal"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a44c63b413e601677f81ee527edf24849aa9e1a11ac4af256952e3927c803637"
+dependencies = [
+ "rppal 0.22.1",
+]
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -136,6 +146,15 @@ name = "rppal"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "612e1a22e21f08a246657c6433fe52b773ae43d07c9ef88ccfc433cc8683caba"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "rppal"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1ce3b019009cff02cb6b0e96e7cc2e5c5b90187dc1a490f8ef1521d0596b026"
 dependencies = [
  "libc",
 ]

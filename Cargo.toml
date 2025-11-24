@@ -9,6 +9,7 @@ rppal = "0.14"
 tokio = {version="1", features=["full"]}
 serde = {version="1", features=["derive"]}
 serde_json = "1"
+pca9685-rppal = "0.1.0"
 
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
