@@ -1,4 +1,5 @@
 mod hal;
+use hal::camera::Camera;
 use hal::ldr::Ldr;
 use hal::motor::Motor;
 use hal::neopixel::Neopixel;
