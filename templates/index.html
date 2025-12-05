@@ -15,7 +15,7 @@
         <div
           id="sensor-panel"
           hx-get="/partials/sensors"
-          hx-trigger="load"
+          hx-trigger="load, every 1s"
           hx-swap="innerHTML"
         >
           Loading sensors…
@@ -26,6 +26,11 @@
         <h3>Controls</h3>
         <button hx-post="/api/motor/forward">Forward</button>
         <button hx-post="/api/motor/stop">Stop</button>
+      </section>
+
+      <section>
+        <h3>HTMX time from the server</h3>
+        <p hx-trigger="load, every 1s" hx-get="/time">...</p>
       </section>
     </main>
 

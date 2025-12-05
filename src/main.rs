@@ -1,4 +1,6 @@
 mod hal;
+mod state;
+
 use hal::camera::Camera;
 use hal::ldr::Ldr;
 use hal::motor::Motor;
@@ -9,9 +11,9 @@ use hal::ultrasound::UltrasoundSensor;
 use opencv::core::MatTraitConst;
 use rand::Rng;
 use serde::Deserialize;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use maud::{DOCTYPE, Markup, html};
 use tokio::io::AsyncReadExt;
 use tokio::net::UnixListener;
 use tokio::signal;
@@ -21,9 +23,13 @@ use tokio::time::Duration;
 
 use axum::{
     Router,
-    response::Html,
+    response::{Html, IntoResponse},
     routing::{get, post},
 };
+use axum_htmx::HxResponseTrigger;
+use state::RobotState;
+use std::sync::{Arc, Mutex};
+use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 #[derive(Deserialize, Debug)]
@@ -85,10 +91,13 @@ async fn main() {
 
     let (command_tx, mut command_rx) = mpsc::channel::<String>(32);
 
+    let state = Arc::new(Mutex::new(RobotState::default()));
+
     {
         println!("Starting LDR thread");
 
         let shutdown = shutdown.clone();
+        let state = Arc::clone(&state);
         let ldr = Ldr::new(19, 16, 20).unwrap();
 
         task::spawn_blocking(move || {
@@ -98,8 +107,13 @@ async fn main() {
                 let readings = ldr.readings();
 
                 if readings != last_reading {
-                    println!("LDR values: {:?}", readings);
                     last_reading = readings;
+
+                    let (l_val, m_val, r_val) = readings;
+                    let mut st = state.lock().unwrap();
+                    st.ldr_left = l_val;
+                    st.ldr_middle = m_val;
+                    st.ldr_right = r_val;
                 }
 
                 std::thread::sleep(Duration::from_millis(200));
@@ -135,6 +149,7 @@ async fn main() {
         println!("Starting Ultrasound thread");
 
         let shutdown = shutdown.clone();
+        let state = Arc::clone(&state);
         let mut us = UltrasoundSensor::new(11, 8).unwrap();
         let tx = servo_tx.clone();
 
@@ -149,6 +164,11 @@ async fn main() {
 
                 if avg != last_avg {
                     last_avg = avg;
+
+                    {
+                        let mut st = state.lock().unwrap();
+                        st.ultrasound = avg;
+                    }
 
                     if let Err(e) = tx.send(Command::Servo { angle: avg as u8 }).await {
                         eprintln!("Servo send failed: {}", e);
@@ -218,6 +238,7 @@ async fn main() {
         println!("Staring Neopixel thread");
 
         let shutdown = shutdown.clone();
+        let state = Arc::clone(&state);
 
         tokio::spawn(async move {
             let mut neopixel = Neopixel::new().expect("Neopixel failed");
@@ -228,6 +249,13 @@ async fn main() {
                 let b = rand::rng().random_range(0..=255);
 
                 let _ = neopixel.set_pixels(r, g, b, 0);
+
+                {
+                    let mut st = state.lock().unwrap();
+                    st.neopixel_r = r;
+                    st.neopixel_g = g;
+                    st.neopixel_b = b;
+                }
 
                 std::thread::sleep(Duration::from_millis(250));
             }
@@ -314,9 +342,12 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .nest_service("/static", static_files)
+        .route("/time", get(time))
         .route("/partials/sensors", get(partial_sensors))
         .route("/api/motor/forward", post(|| async { "ok" }))
-        .route("/api/motor/stop", post(|| async { "ok" }));
+        .route("/api/motor/stop", post(|| async { "ok" }))
+        .layer(CorsLayer::permissive())
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
@@ -343,6 +374,33 @@ async fn index() -> Html<String> {
     Html(html)
 }
 
-async fn partial_sensors() -> Html<&'static str> {
-    Html("<p>No sensors wired yet :-)</p>")
+async fn partial_sensors(
+    axum::extract::State(state): axum::extract::State<Arc<Mutex<RobotState>>>,
+) -> Html<String> {
+    let st = state.lock().unwrap();
+
+    let html = format!(
+        r#"
+        <ul>
+            <li><strong>LDR Left:</strong> {}</li>
+            <li><strong>LDR Middle:</strong> {}</li>
+            <li><strong>LDR Right:</strong> {}</li>
+            <li><strong>Ultrasound:</strong> {} cm</li>
+            <li><strong>Neopixel RGB:</strong> {}, {}, {}</li>
+        </ul>
+        "#,
+        st.ldr_left,
+        st.ldr_middle,
+        st.ldr_right,
+        st.ultrasound,
+        st.neopixel_r,
+        st.neopixel_g,
+        st.neopixel_b,
+    );
+
+    Html(html)
+}
+
+async fn time() -> impl IntoResponse {
+    chrono::Utc::now().format("%H:%M:%S").to_string()
 }
