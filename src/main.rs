@@ -9,7 +9,6 @@ use hal::servo::Servo;
 use hal::ultrasound::UltrasoundSensor;
 
 use opencv::core::MatTraitConst;
-use rand::Rng;
 use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -30,7 +29,7 @@ use axum_htmx::HxResponseTrigger;
 use state::RobotState;
 use std::sync::{Arc, Mutex};
 use tower_http::cors::CorsLayer;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[derive(Deserialize, Debug)]
 enum MotorDirection {
@@ -160,7 +159,7 @@ async fn main() {
             while !shutdown.load(Ordering::SeqCst) {
                 let dist = us.measure_cm().unwrap_or(0);
                 let new_value = dist.clamp(0, 100);
-                avg = avg * 0.7 + (new_value as f64) * 0.3;
+                avg = avg * 0.5 + (new_value as f64) * 0.3;
 
                 if avg != last_avg {
                     last_avg = avg;
@@ -285,7 +284,7 @@ async fn main() {
                     Err(e) => eprintln!("Camera error: {e}"),
                 }
 
-                tokio::time::sleep(Duration::from_millis(50)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
     }
@@ -340,7 +339,9 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .nest_service("/static", static_files)
+        .nest_service("/camera/frame.jpg", ServeFile::new("/tmp/frame.jpg"))
         .route("/time", get(time))
+        .route("/partials/camera", get(partial_camera))
         .route("/partials/sensors", get(partial_sensors))
         .route("/api/motor/forward", post(|| async { "ok" }))
         .route("/api/motor/stop", post(|| async { "ok" }))
@@ -401,6 +402,11 @@ async fn partial_sensors(
 
 async fn time() -> impl IntoResponse {
     chrono::Utc::now().format("%H:%M:%S").to_string()
+}
+
+async fn partial_camera() -> impl IntoResponse {
+    let ts = chrono::Utc::now().timestamp_millis();
+    format!("/camera/frame.jpg?ts={}", ts)
 }
 
 // Convert distance to a red-to-green scale for neopixels

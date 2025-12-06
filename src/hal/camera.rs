@@ -35,7 +35,6 @@ impl Camera {
             let filename = "/tmp/frame.jpg";
             opencv::imgcodecs::imwrite(&filename, &frame, &opencv::core::Vector::<i32>::new())?;
             self.last_save = std::time::Instant::now();
-            println!("Saved frame");
         }
 
         Ok(frame)

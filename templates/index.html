@@ -11,6 +11,18 @@
       <p>Welcome to the control panel.</p>
 
       <section>
+        <h3>Camera</h3>
+        <img
+          id="camera"
+          src="/camera/frame.jpg"
+          hx-get="/partials/camera"
+          hx-trigger="every 1s"
+          hx-on::after-request="this.src = event.detail.xhr.responseText;"
+          hx-swap="none"
+          hx-target="this"
+        />
+      </section>
+      <section>
         <h3>Sensors</h3>
         <div
           id="sensor-panel"
