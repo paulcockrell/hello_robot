@@ -244,17 +244,15 @@ async fn main() {
             let mut neopixel = Neopixel::new().expect("Neopixel failed");
 
             while !shutdown.load(Ordering::SeqCst) {
-                let r = rand::rng().random_range(0..=255);
-                let g = rand::rng().random_range(0..=255);
-                let b = rand::rng().random_range(0..=255);
-
-                let _ = neopixel.set_pixels(r, g, b, 0);
-
                 {
                     let mut st = state.lock().unwrap();
-                    st.neopixel_r = r;
-                    st.neopixel_g = g;
-                    st.neopixel_b = b;
+                    let (r_val, g_val, b_val) = distance_to_rgb(st.ultrasound);
+
+                    st.neopixel_r = r_val as u8;
+                    st.neopixel_g = g_val as u8;
+                    st.neopixel_b = b_val;
+
+                    let _ = neopixel.set_pixels(r_val, g_val, b_val, 0);
                 }
 
                 std::thread::sleep(Duration::from_millis(250));
@@ -403,4 +401,16 @@ async fn partial_sensors(
 
 async fn time() -> impl IntoResponse {
     chrono::Utc::now().format("%H:%M:%S").to_string()
+}
+
+// Convert distance to a red-to-green scale for neopixels
+fn distance_to_rgb(distance: f64) -> (u8, u8, u8) {
+    let d = distance.clamp(0.0, 100.0);
+    let t = d / 100.0;
+
+    let red = (255.0 * (1.0 - t)) as u8;
+    let green = (255.0 * t) as u8;
+    let blue = 0u8;
+
+    (red, green, blue)
 }

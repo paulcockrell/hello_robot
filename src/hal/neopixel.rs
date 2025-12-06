@@ -28,10 +28,10 @@ impl Neopixel {
         Ok(Self { controller })
     }
 
-    pub fn set_pixels(&mut self, r: u8, g: u8, b: u8, a: u8) -> Result<()> {
+    pub fn set_pixels(&mut self, r: u8, g: u8, b: u8, w: u8) -> Result<()> {
         let leds = self.controller.leds_mut(0);
         for led in leds {
-            *led = [r, g, b, a];
+            *led = [b, g, r, w]; // This chipset is using BGRW
         }
 
         self.controller.render().unwrap();
