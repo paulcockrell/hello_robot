@@ -16,7 +16,7 @@
           id="camera"
           src="/camera/frame.jpg"
           hx-get="/partials/camera"
-          hx-trigger="every 1s"
+          hx-trigger="every 500ms"
           hx-on::after-request="this.src = event.detail.xhr.responseText;"
           hx-swap="none"
           hx-target="this"
