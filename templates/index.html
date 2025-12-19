@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <title>Rusty Robot Dashboard</title>
     <link rel="stylesheet" href="/static/pico.min.css" />
+    <link rel="stylesheet" href="/static/orbit.min.css" />
+    <link rel="stylesheet" href="/static/robot.css" />
   </head>
   <body>
     <main class="container">
@@ -50,11 +52,37 @@
       </section>
 
       <section>
+        <div class="bigbang">
+          <div class="gravity-spot">
+            <div class="orbit-1">
+              <div class="capsule">volume</div>
+            </div>
+            <div class="orbit-6">
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+              <div class="vector"></div>
+            </div>
+            <div class="orbit-7">
+              <o-progress value="50"></o-progress>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h3>HTMX time from the server</h3>
         <p hx-trigger="load, every 1s" hx-get="/time">...</p>
       </section>
     </main>
 
     <script src="/static/htmx.min.js"></script>
+    <script src="/static/orbit.min.js"></script>
   </body>
 </html>

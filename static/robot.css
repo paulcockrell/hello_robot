@@ -1,0 +1,10 @@
+.orbit,
+[class*="orbit-"] {
+  border: 1px dashed var(--o-cyan) !important;
+}
+.orbit-1 {
+  border: none !important;
+}
+.orbit-5 {
+  border: 2px solid var(--o-cyan) !important;
+}
