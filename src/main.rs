@@ -18,13 +18,13 @@ async fn main() {
         tokio::spawn(nodes::camera::run(bus.clone())),
         tokio::spawn(nodes::web::run(bus.clone())),
         tokio::spawn(nodes::ultrasound::run(bus.clone())),
-        tokio::spawn(nodes::servo::run(bus.clone())),
     ];
 
     // Local hardware node
     let local = LocalSet::new();
 
     local.spawn_local(nodes::leds::run(bus.clone()));
+    local.spawn_local(nodes::servo::run(bus.clone())),
 
     local
         .run_until(async {
