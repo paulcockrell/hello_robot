@@ -13,8 +13,9 @@ impl Servo {
         Ok(Self { pca })
     }
 
-    pub fn set_angle(&mut self, percent: u8) -> anyhow::Result<()> {
-        let angle = map_range(percent as i32, 0, 100, 300, 150) as u16;
+    pub fn set_angle(&mut self, deg: u8) -> anyhow::Result<()> {
+        let deg = deg.clamp(0, 180);
+        let angle = map_range(deg as i32, 0, 180, 300, 150) as u16;
         self.pca.set_pwm(0, 0, angle).expect("Set angle to {angle}");
 
         Ok(())
