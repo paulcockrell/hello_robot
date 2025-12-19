@@ -31,9 +31,18 @@ pub async fn run(bus: EventBus) {
                 }
             }
             msg = rx.recv() => {
-                if matches!(msg, Ok(Event::Shutdown)) {
-                    println!("Ultrasound node shutting down");
-                    break;
+                match msg {
+                    Ok(Event::Shutdown) => {
+                        println!("Ultrasound node shutting down");
+                        break;
+                    }
+                    Ok(_) => {
+                        // ignore other events
+                    }
+                    Err(_) => {
+                        // channel closed → yield or exit
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                    }
                 }
             }
         }
