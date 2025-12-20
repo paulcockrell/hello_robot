@@ -1,33 +1,56 @@
-use std::time::Duration;
-
 use crate::{
-    bus::{event::Event, event_bus::EventBus},
-    hal::ldr::Ldr,
+    bus::{
+        event::{Event, Ldr},
+        event_bus::EventBus,
+    },
+    hal::ldr::LdrSensor,
+};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
 };
 
 pub async fn run(bus: EventBus) {
-    let mut rx = bus.subscribe();
-    let ldr = Ldr::new(19, 16, 20).unwrap();
-    let mut last_reading: (u8, u8, u8) = (0, 0, 0);
+    let mut bus_rx = bus.subscribe();
+    let bus_tx = bus.clone();
 
-    loop {
-        tokio::select! {
-            _ = tokio::time::sleep(Duration::from_millis(200))=>{
-                let readings = ldr.readings();
+    let running = Arc::new(AtomicBool::new(true));
+    let running_thread = running.clone();
 
-                if readings != last_reading {
-                    last_reading = readings;
-                    let (l_val, m_val, r_val) = readings;
-                    println!("l_val={l_val}, m_val={m_val}, r_val={r_val}");
-                }
+    let task = tokio::task::spawn_blocking(move || {
+        let ldr = LdrSensor::new(19, 16, 20).unwrap();
+        let mut last_reading: (u8, u8, u8) = (0, 0, 0);
 
+        while running_thread.load(Ordering::Relaxed) {
+            let readings = ldr.readings();
+
+            if readings != last_reading {
+                last_reading = readings;
+                let (l_val, m_val, r_val) = readings;
+
+                bus_tx.publish(Event::Ldr(Ldr {
+                    l_val,
+                    m_val,
+                    r_val,
+                }));
+
+                println!("l_val={l_val}, m_val={m_val}, r_val={r_val}");
             }
-            msg = rx.recv() => {
-                if matches!(msg, Ok(Event::Shutdown)) {
-                    println!("LDR node shutting down");
-                    break;
-                }
-            }
+
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    });
+
+    while let Ok(event) = bus_rx.recv().await {
+        if matches!(event, Event::Shutdown) {
+            println!("LDR node shutting down");
+            break;
         }
     }
+
+    running.store(false, Ordering::Relaxed);
+    let _ = task.await;
 }

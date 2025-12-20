@@ -24,9 +24,17 @@ pub struct Ultrasound {
 }
 
 #[derive(Debug, Clone)]
+pub struct Ldr {
+    pub l_val: u8,
+    pub m_val: u8,
+    pub r_val: u8,
+}
+
+#[derive(Debug, Clone)]
 pub enum Event {
     MotorCommand(MotorCommand),
     ServoCommand(ServoCommand),
     Ultrasound(Ultrasound),
+    Ldr(Ldr),
     Shutdown,
 }

@@ -14,9 +14,9 @@ async fn main() {
 
     let handles = vec![
         tokio::spawn(nodes::motor::run(bus.clone())),
-        // tokio::spawn(nodes::ldr::run(bus.clone())),
+        tokio::spawn(nodes::ldr::run(bus.clone())),
         tokio::spawn(nodes::ultrasound::run(bus.clone())),
-        // tokio::spawn(nodes::camera::run(bus.clone())),
+        tokio::spawn(nodes::camera::run(bus.clone())),
         tokio::spawn(nodes::web::run(bus.clone())),
     ];
 

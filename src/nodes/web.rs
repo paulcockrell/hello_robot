@@ -62,6 +62,7 @@ async fn time() -> impl IntoResponse {
     chrono::Utc::now().format("%H:%M:%S").to_string()
 }
 
+// TODO convert this to read sensor data from bus and publish over websockets
 async fn partial_sensors() -> Html<String> {
     let ldr_left = 0;
     let ldr_middle = 0;

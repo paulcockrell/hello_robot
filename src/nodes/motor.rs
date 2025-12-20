@@ -1,4 +1,4 @@
-use std::{sync::mpsc, time::Duration};
+use std::sync::mpsc;
 
 use crate::{
     bus::{

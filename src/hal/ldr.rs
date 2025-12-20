@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 use rppal::gpio::{Gpio, InputPin};
 
-pub struct Ldr {
+pub struct LdrSensor {
     l_pin: InputPin, // 19
     m_pin: InputPin, // 16
     r_pin: InputPin, // 20
 }
 
-impl Ldr {
-    pub fn new(l_pin_num: u8, m_pin_num: u8, r_pin_num: u8) -> Result<Ldr> {
+impl LdrSensor {
+    pub fn new(l_pin_num: u8, m_pin_num: u8, r_pin_num: u8) -> Result<LdrSensor> {
         let gpio = Gpio::new().context("Failed to initialize GPIO")?;
         let l_pin = gpio
             .get(l_pin_num)
