@@ -1,6 +1,7 @@
 use axum::body::{Body, Bytes};
 use axum::extract::State;
 use axum::response::IntoResponse;
+use axum::response::Response;
 use axum::{Router, response::Html, routing::get, routing::post};
 use futures::stream;
 use std::convert::Infallible;
@@ -183,43 +184,44 @@ async fn servo_down_handler(State(app_state): State<AppState>) -> impl IntoRespo
 
     "Down"
 }
-
 async fn mjpeg_handler(State(app_state): State<AppState>) -> impl IntoResponse {
     let stream = stream::unfold((), move |_| {
         let frame = app_state.camera.latest_frame.clone();
+        let mut shutdown = app_state.shutdown.clone();
 
         async move {
-            let jpeg_opt = {
-                let guard = frame.lock().unwrap();
-                if guard.is_empty() {
+            tokio::select! {
+                _=shutdown.changed()=>{
+                    println!("MJPEG stream shutting down");
                     None
-                } else {
-                    Some(guard.clone())
                 }
-            };
 
-            if let Some(jpeg) = jpeg_opt {
-                let mut chunk = Vec::new();
+                _ = sleep(Duration::from_millis(50)) => {
+                    let jpeg = {
+                        let guard = frame.lock().unwrap();
+                        if guard.is_empty() {
+                            None
+                        } else {
+                            Some(guard.clone())
+                        }
+                    }?;
 
-                chunk.extend_from_slice(b"--frame\r\n");
-                chunk.extend_from_slice(b"Content-Type: image/jpeg\r\n");
-                chunk.extend_from_slice(
-                    format!("Content-Length: {}\r\n\r\n", jpeg.len()).as_bytes(),
-                );
-                chunk.extend_from_slice(&jpeg);
-                chunk.extend_from_slice(b"\r\n");
+                    let mut chunk = Vec::new();
+                    chunk.extend_from_slice(b"--frame\r\n");
+                    chunk.extend_from_slice(b"Content-Type: image/jpeg\r\n");
+                    chunk.extend_from_slice(
+                        format!("Content-Length: {}\r\n\r\n", jpeg.len()).as_bytes(),
+                    );
+                    chunk.extend_from_slice(&jpeg);
+                    chunk.extend_from_slice(b"\r\n");
 
-                sleep(Duration::from_millis(100)).await;
-
-                Some((Ok(Bytes::from(chunk)), ()))
-            } else {
-                sleep(Duration::from_millis(100)).await;
-                Some((Ok::<Bytes, Infallible>(Bytes::new()), ()))
+                    Some((Ok::<Bytes, Infallible>(Bytes::from(chunk)), ()))
+                }
             }
         }
     });
 
-    axum::response::Response::builder()
+    Response::builder()
         .header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
         .body(Body::from_stream(stream))
         .unwrap()

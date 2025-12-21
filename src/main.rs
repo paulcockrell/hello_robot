@@ -2,7 +2,7 @@ mod bus;
 mod hal;
 mod nodes;
 
-use tokio::task::LocalSet;
+use tokio::{sync::watch, task::LocalSet};
 
 use crate::{
     bus::{event::Event, event_bus::EventBus},
@@ -13,15 +13,20 @@ use crate::{
 struct AppState {
     pub bus: EventBus,
     pub camera: CameraState,
+    pub shutdown: watch::Receiver<()>,
 }
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     println!("Starting Main thread");
 
+    let bus = EventBus::new(64);
+    let shutdown_rx = spawn_shutdown_bridge(bus.clone());
+
     let app_state = AppState {
-        bus: EventBus::new(64),
+        bus,
         camera: CameraState::new(),
+        shutdown: shutdown_rx,
     };
 
     let handles = vec![
@@ -54,4 +59,20 @@ async fn main() {
         .await;
 
     println!("Shutdown complete");
+}
+
+fn spawn_shutdown_bridge(bus: EventBus) -> watch::Receiver<()> {
+    let (tx, rx) = watch::channel(());
+
+    tokio::spawn(async move {
+        let mut bus_rx = bus.subscribe();
+        while let Ok(event) = bus_rx.recv().await {
+            if matches!(event, Event::Shutdown) {
+                let _ = tx.send(());
+                break;
+            }
+        }
+    });
+
+    rx
 }
