@@ -1,5 +1,20 @@
+use std::sync::{Arc, Mutex};
+
 use anyhow::{Context, Ok, Result};
-use opencv::{imgproc, prelude::*, videoio};
+use opencv::{core::Vector, imgcodecs, imgproc, prelude::*, videoio};
+
+#[derive(Debug, Clone)]
+pub struct CameraState {
+    pub latest_frame: Arc<Mutex<Vec<u8>>>,
+}
+
+impl CameraState {
+    pub fn new() -> Self {
+        CameraState {
+            latest_frame: Arc::new(Mutex::new(Vec::<u8>::new())),
+        }
+    }
+}
 
 pub struct Camera {
     cap: videoio::VideoCapture,
@@ -23,9 +38,10 @@ impl Camera {
         })
     }
 
-    pub fn frame(&mut self) -> Result<Mat> {
+    pub fn frame_mat(&mut self) -> Result<Mat> {
         let mut frame = Mat::default();
         self.cap.read(&mut frame)?;
+
         if frame.size()?.width == 0 {
             anyhow::bail!("Captured empty frame");
         }
@@ -33,8 +49,18 @@ impl Camera {
         Ok(frame)
     }
 
+    pub fn frame_jpeg(&mut self) -> Result<Vec<u8>> {
+        let mat = self.frame_mat()?;
+
+        let mut buf = Vector::<u8>::new();
+
+        imgcodecs::imencode(".jpg", &mat, &mut buf, &Vector::new())?;
+
+        Ok(buf.to_vec())
+    }
+
     pub fn grayscale(&mut self) -> Result<Mat> {
-        let frame = self.frame()?;
+        let frame = self.frame_mat()?;
         let mut gray = Mat::default();
         imgproc::cvt_color(&frame, &mut gray, imgproc::COLOR_BGR2GRAY, 0)?;
 

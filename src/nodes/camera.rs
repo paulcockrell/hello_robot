@@ -1,7 +1,4 @@
-use crate::{
-    bus::{event::Event, event_bus::EventBus},
-    hal::camera::Camera,
-};
+use crate::{AppState, bus::event::Event, hal::camera::Camera};
 use std::{
     sync::{
         Arc,
@@ -10,19 +7,18 @@ use std::{
     time::Duration,
 };
 
-pub async fn run(bus: EventBus) {
-    let mut bus_rx = bus.subscribe();
+pub async fn run(app_state: AppState) {
+    let mut bus_rx = app_state.bus.subscribe();
 
     let running = Arc::new(AtomicBool::new(true));
     let running_thread = running.clone();
 
     let task = tokio::task::spawn_blocking(move || {
         let mut camera = Camera::new().expect("Could not setup camera");
+
         while running_thread.load(Ordering::Relaxed) {
-            if matches!(camera.save_frame(), Ok(true)) {
-                println!("Saved frame");
-            } else {
-                println!("Failed to save frame");
+            if let Ok(jpeg) = camera.frame_jpeg() {
+                *app_state.camera.latest_frame.lock().unwrap() = jpeg;
             }
 
             std::thread::sleep(Duration::from_millis(1000));
@@ -31,7 +27,7 @@ pub async fn run(bus: EventBus) {
 
     while let Ok(event) = bus_rx.recv().await {
         if matches!(event, Event::Shutdown) {
-            println!("LDR node shutting down");
+            println!("Camera node shutting down");
             break;
         }
     }

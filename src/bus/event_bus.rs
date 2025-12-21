@@ -1,7 +1,7 @@
 use crate::bus::event::Event;
 use tokio::sync::broadcast;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EventBus {
     tx: broadcast::Sender<Event>,
 }

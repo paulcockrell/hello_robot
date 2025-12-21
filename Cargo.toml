@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1"
 axum-htmx = "0.8.1"
 chrono = { version = "0.4.42", features = ["serde"] }
-
+futures = "0.3"
 rppal = "0.14"
 tokio = {version="1", features=["full"]}
 serde = {version="1", features=["derive"]}
@@ -15,10 +15,10 @@ serde_json = "1"
 pca9685-rppal = "0.1.0"
 rs_ws281x = "0.5.1"
 rand = "0.9.2"
-opencv = { version = "0.97" }
-axum = { version = "0.7", features = ["macros", "http1", "http2"] }
+opencv = { version = "0.98" }
+axum = { version = "0.8", features = ["macros", "http1", "http2"] }
 tower = "0.5"
-tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "cors"] }
 maud = { version = "0.27.0", features = ["axum"] }
 
 [target.aarch64-unknown-linux-gnu]
