@@ -21,7 +21,7 @@ pub async fn run(app_state: AppState) {
                 *app_state.camera.latest_frame.lock().unwrap() = jpeg;
             }
 
-            std::thread::sleep(Duration::from_millis(1000));
+            std::thread::sleep(Duration::from_millis(100));
         }
     });
 

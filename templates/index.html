@@ -14,15 +14,7 @@
 
       <section>
         <h3>Camera</h3>
-        <img
-          id="camera"
-          src="/camera/frame.jpg"
-          hx-get="/partials/camera"
-          hx-trigger="every 1000ms"
-          hx-on::after-request="this.src = event.detail.xhr.responseText;"
-          hx-swap="none"
-          hx-target="this"
-        />
+        <img id="camera" src="/camera/frame.mjpeg" />
       </section>
       <section>
         <h3>Sensors</h3>

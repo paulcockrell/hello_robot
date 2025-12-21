@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Ok, Result};
-use opencv::{core::Vector, imgcodecs, imgproc, prelude::*, videoio};
+use opencv::{core::Vector, imgcodecs, prelude::*, videoio};
 
 #[derive(Debug, Clone)]
 pub struct CameraState {
@@ -18,7 +18,6 @@ impl CameraState {
 
 pub struct Camera {
     cap: videoio::VideoCapture,
-    last_save: std::time::Instant,
 }
 
 impl Camera {
@@ -32,10 +31,7 @@ impl Camera {
             anyhow::bail!("Camera was not opened");
         }
 
-        Ok(Camera {
-            cap,
-            last_save: std::time::Instant::now(),
-        })
+        Ok(Camera { cap })
     }
 
     pub fn frame_mat(&mut self) -> Result<Mat> {
@@ -57,27 +53,5 @@ impl Camera {
         imgcodecs::imencode(".jpg", &mat, &mut buf, &Vector::new())?;
 
         Ok(buf.to_vec())
-    }
-
-    pub fn grayscale(&mut self) -> Result<Mat> {
-        let frame = self.frame_mat()?;
-        let mut gray = Mat::default();
-        imgproc::cvt_color(&frame, &mut gray, imgproc::COLOR_BGR2GRAY, 0)?;
-
-        Ok(gray)
-    }
-
-    pub fn save_frame(&mut self) -> Result<bool> {
-        // Minimum frame saving frequency of 1 seconds to allow it to complete
-        if self.last_save.elapsed().as_secs() >= 1 {
-            let filename = "/tmp/frame.jpg";
-            let frame = self.grayscale()?;
-            opencv::imgcodecs::imwrite(filename, &frame, &opencv::core::Vector::<i32>::new())?;
-            self.last_save = std::time::Instant::now();
-
-            Ok(true)
-        } else {
-            Ok(false)
-        }
     }
 }
