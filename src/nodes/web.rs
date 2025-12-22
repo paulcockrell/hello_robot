@@ -1,5 +1,6 @@
 use axum::body::{Body, Bytes};
 use axum::extract::State;
+use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::{Router, response::Html, routing::get, routing::post};
@@ -15,6 +16,7 @@ use tower_http::services::ServeFile;
 use crate::AppState;
 use crate::bus::event::{Event, MotorCommand, MotorDirection, ServoCommand};
 use crate::bus::event_bus::EventBus;
+use crate::nodes::telemetry_bridge::TelemetryTx;
 
 pub async fn run(app_state: AppState) {
     let static_files = ServeDir::new("static");
@@ -34,6 +36,7 @@ pub async fn run(app_state: AppState) {
         .route("/api/motor/stop", post(motor_stop_handler))
         .route("/api/servo/up", post(servo_up_handler))
         .route("/api/servo/down", post(servo_down_handler))
+        .route("/ws", get(ws_handler))
         .layer(CorsLayer::permissive())
         .with_state(app_state.clone());
 
@@ -225,4 +228,23 @@ async fn mjpeg_handler(State(app_state): State<AppState>) -> impl IntoResponse {
         .header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
         .body(Body::from_stream(stream))
         .unwrap()
+}
+
+pub async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(app_state): State<AppState>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, app_state.telemetry_tx))
+}
+
+async fn handle_socket(mut socket: WebSocket, telemetry_tx: TelemetryTx) {
+    let mut rx = telemetry_tx.subscribe();
+
+    while let Ok(msg) = rx.recv().await {
+        let json = serde_json::to_string(&msg).unwrap();
+
+        if socket.send(json.into()).await.is_err() {
+            break; // client disconnected
+        }
+    }
 }

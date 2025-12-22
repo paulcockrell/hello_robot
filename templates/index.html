@@ -18,14 +18,8 @@
       </section>
       <section>
         <h3>Sensors</h3>
-        <div
-          id="sensor-panel"
-          hx-get="/partials/sensors"
-          hx-trigger="load, every 1s"
-          hx-swap="innerHTML"
-        >
-          Loading sensors…
-        </div>
+        <div id="ultrasound_sensor">Loading ultrasound data…</div>
+        <div id="ldr_sensor">Loading ldr data…</div>
       </section>
 
       <section>
@@ -76,5 +70,24 @@
 
     <script src="/static/htmx.min.js"></script>
     <script src="/static/orbit.min.js"></script>
+    <script>
+      const ws = new WebSocket("ws://raspberrypi.local:3000/ws");
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.Ultrasound) {
+          console.log("Ultrasound:", msg.Ultrasound);
+          document.getElementById("ultrasound_sensor").innerText =
+            msg.Ultrasound.distance.toFixed(1);
+        }
+
+        if (msg.Ldr) {
+          console.log("LDR:", msg.Ldr);
+          document.getElementById("ldr_sensor").innerText =
+            `left=${msg.Ldr.l_val}, middle=${msg.Ldr.m_val}, right=${msg.Ldr.r_val}`;
+        }
+      };
+    </script>
   </body>
 </html>

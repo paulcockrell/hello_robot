@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 #[derive(Debug, Clone)]
 pub enum MotorDirection {
     Forward,
@@ -18,12 +20,12 @@ pub struct ServoCommand {
     pub angle: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Ultrasound {
     pub distance: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Ldr {
     pub l_val: u8,
     pub m_val: u8,

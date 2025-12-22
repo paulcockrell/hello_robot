@@ -2,11 +2,15 @@ mod bus;
 mod hal;
 mod nodes;
 
-use tokio::{sync::watch, task::LocalSet};
+use tokio::{
+    sync::{broadcast, watch},
+    task::LocalSet,
+};
 
 use crate::{
     bus::{event::Event, event_bus::EventBus},
     hal::camera::CameraState,
+    nodes::telemetry_bridge::TelemetryTx,
 };
 
 #[derive(Debug, Clone)]
@@ -14,6 +18,7 @@ struct AppState {
     pub bus: EventBus,
     pub camera: CameraState,
     pub shutdown: watch::Receiver<()>,
+    pub telemetry_tx: TelemetryTx,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -22,11 +27,13 @@ async fn main() {
 
     let bus = EventBus::new(64);
     let shutdown_rx = spawn_shutdown_bridge(bus.clone());
+    let (telemetry_tx, _) = broadcast::channel(64);
 
     let app_state = AppState {
         bus,
         camera: CameraState::new(),
         shutdown: shutdown_rx,
+        telemetry_tx,
     };
 
     let handles = vec![
@@ -35,6 +42,7 @@ async fn main() {
         tokio::spawn(nodes::ultrasound::run(app_state.bus.clone())),
         tokio::spawn(nodes::camera::run(app_state.clone())),
         tokio::spawn(nodes::web::run(app_state.clone())),
+        tokio::spawn(nodes::telemetry_bridge::run(app_state.clone())),
     ];
 
     // Local hardware node
