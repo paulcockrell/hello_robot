@@ -1,10 +1,24 @@
-.orbit,
-[class*="orbit-"] {
-  border: 1px dashed var(--o-cyan) !important;
+.accent {
+  --o-fill: var(--o-gray-darker);
 }
-.orbit-1 {
-  border: none !important;
+.accent:hover {
+  --o-fill: var(--o-cyan-darker);
 }
-.orbit-5 {
-  border: 2px solid var(--o-cyan) !important;
+.accent.active {
+  --o-fill: var(--o-cyan);
+}
+
+/* Button icons */
+.satellite {
+  border: transparent;
+  z-index: 1;
+}
+
+.satellite .capsule {
+  color: var(--o-gray-darker);
+  font-size: 1.25em;
+}
+
+.main-menu o-arc {
+  --o-color: var(--o-gray-darker);
 }
