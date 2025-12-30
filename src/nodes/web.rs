@@ -1,10 +1,11 @@
 use axum::body::{Body, Bytes};
-use axum::extract::State;
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::extract::{Json, State};
 use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::{Router, response::Html, routing::get, routing::post};
 use futures::stream;
+use serde::Deserialize;
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,9 +15,14 @@ use tower_http::services::ServeDir;
 use tower_http::services::ServeFile;
 
 use crate::AppState;
-use crate::bus::event::{Event, MotorCommand, MotorDirection, ServoCommand};
+use crate::bus::event::{Event, LedCommand, MotorCommand, MotorDirection, ServoCommand};
 use crate::bus::event_bus::EventBus;
 use crate::nodes::telemetry_bridge::TelemetryTx;
+
+#[derive(Debug, Deserialize)]
+struct WebCommand {
+    action: String,
+}
 
 pub async fn run(app_state: AppState) {
     let static_files = ServeDir::new("static");
@@ -29,13 +35,9 @@ pub async fn run(app_state: AppState) {
         .route("/partials/camera", get(partial_camera))
         .route("/camera/frame.mjpeg", get(mjpeg_handler))
         .route("/partials/sensors", get(partial_sensors))
-        .route("/api/motor/forward", post(motor_forward_handler))
-        .route("/api/motor/backward", post(motor_backward_handler))
-        .route("/api/motor/left", post(motor_left_handler))
-        .route("/api/motor/right", post(motor_right_handler))
-        .route("/api/motor/stop", post(motor_stop_handler))
-        .route("/api/servo/up", post(servo_up_handler))
-        .route("/api/servo/down", post(servo_down_handler))
+        .route("/api/motor", post(motor_command))
+        .route("/api/servo", post(servo_command))
+        .route("/api/leds", post(led_command))
         .route("/ws", get(ws_handler))
         .layer(CorsLayer::permissive())
         .with_state(app_state.clone());
@@ -103,90 +105,131 @@ async fn partial_camera() -> impl IntoResponse {
     format!("/camera/frame.jpg?ts={}", ts)
 }
 
-async fn motor_forward_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received forward command");
+async fn motor_command(
+    State(app_state): State<AppState>,
+    Json(payload): Json<WebCommand>,
+) -> impl IntoResponse {
+    println!("Received motor command {:?}", payload);
 
+    match payload.action.as_str() {
+        "motor.forward" => motor_foreward_handler(app_state),
+        "motor.backward" => motor_backward_handler(app_state),
+        "motor.left" => motor_left_handler(app_state),
+        "motor.right" => motor_right_handler(app_state),
+        "motor.stop" => motor_stop_handler(app_state),
+        _ => println!("Unknown command"),
+    }
+
+    "Ok"
+}
+
+async fn servo_command(
+    State(app_state): State<AppState>,
+    Json(payload): Json<WebCommand>,
+) -> impl IntoResponse {
+    println!("Received servo command {:?}", payload);
+
+    match payload.action.as_str() {
+        "servo.start" => servo_start_handler(app_state),
+        "servo.increment" => servo_increment_handler(app_state),
+        "servo.decrement" => servo_decrement_handler(app_state),
+        "servo.end" => servo_end_handler(app_state),
+        _ => println!("Unknown command"),
+    }
+
+    "Ok"
+}
+
+async fn led_command(
+    State(app_state): State<AppState>,
+    Json(payload): Json<WebCommand>,
+) -> impl IntoResponse {
+    println!("Received leds command {:?}", payload);
+
+    match payload.action.as_str() {
+        "leds.increment" => led_brightness_handler(app_state, 5),
+        "leds.decrement" => led_brightness_handler(app_state, -5),
+        _ => println!("Unknown command"),
+    }
+
+    "Ok"
+}
+
+fn motor_foreward_handler(app_state: AppState) {
     let cmd = MotorCommand {
         direction: MotorDirection::Forward,
         speed: 100,
     };
 
     app_state.bus.publish(Event::MotorCommand(cmd));
-
-    "Forward"
 }
 
-async fn motor_backward_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received backward command");
-
+fn motor_backward_handler(app_state: AppState) {
     let cmd = MotorCommand {
         direction: MotorDirection::Backward,
         speed: 90,
     };
 
     app_state.bus.publish(Event::MotorCommand(cmd));
-
-    "Backward"
 }
 
-async fn motor_left_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received turn left command");
-
+fn motor_left_handler(app_state: AppState) {
     let cmd = MotorCommand {
         direction: MotorDirection::Left,
         speed: 100,
     };
 
     app_state.bus.publish(Event::MotorCommand(cmd));
-
-    "Left"
 }
 
-async fn motor_right_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received turn right command");
-
+fn motor_right_handler(app_state: AppState) {
     let cmd = MotorCommand {
         direction: MotorDirection::Right,
         speed: 100,
     };
 
     app_state.bus.publish(Event::MotorCommand(cmd));
-
-    "Right"
 }
 
-async fn motor_stop_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received stop command");
-
+fn motor_stop_handler(app_state: AppState) {
     let cmd = MotorCommand {
         direction: MotorDirection::Stop,
         speed: 0,
     };
 
     app_state.bus.publish(Event::MotorCommand(cmd));
-
-    "Stop"
 }
 
-async fn servo_up_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received servo up command");
-
+fn servo_end_handler(app_state: AppState) {
     let cmd = ServoCommand { angle: 170 };
 
     app_state.bus.publish(Event::ServoCommand(cmd));
-
-    "Up"
 }
 
-async fn servo_down_handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    println!("Received servo down command");
+fn servo_increment_handler(app_state: AppState) {
+    let cmd = ServoCommand { angle: 25 };
 
+    app_state.bus.publish(Event::ServoCommand(cmd));
+}
+
+fn servo_decrement_handler(app_state: AppState) {
+    let cmd = ServoCommand { angle: 75 };
+
+    app_state.bus.publish(Event::ServoCommand(cmd));
+}
+
+fn servo_start_handler(app_state: AppState) {
     let cmd = ServoCommand { angle: 10 };
 
     app_state.bus.publish(Event::ServoCommand(cmd));
-
-    "Down"
 }
+
+fn led_brightness_handler(app_state: AppState, value: i8) {
+    let cmd = LedCommand { brightness: value };
+
+    app_state.bus.publish(Event::LedCommand(cmd));
+}
+
 async fn mjpeg_handler(State(app_state): State<AppState>) -> impl IntoResponse {
     let stream = stream::unfold((), move |_| {
         let frame = app_state.camera.latest_frame.clone();

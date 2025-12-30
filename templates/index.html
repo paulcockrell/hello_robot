@@ -65,17 +65,17 @@
       import { signal } from "@preact/signals";
       import { html } from "htm/preact";
 
-      const API_BASE_URL = "http://localhost:3000/api";
+      const API_BASE_URL = "http://raspberrypi.local:3000/api";
       const SUB_MENUS = {
         servo: {
-          path: "servos",
+          path: "servo",
           orbitButtonClass: "orbit-5 shrink-70 from-120 range-120",
           orbitAccentClass: "orbit-6 grow-1x from-120 range-120",
           buttons: [
-            ["end", "bi-skip-end-circle-fill", 120, 15],
-            ["incremenet", "bi-plus-circle-fill", 150, 15],
-            ["decrement", "bi-dash-circle-fill", 180, 15],
-            ["start", "bi-skip-start-circle-fill", 210, 15],
+            ["servo.end", "bi-skip-end-circle-fill", 120, 15],
+            ["servo.increment", "bi-plus-circle-fill", 150, 15],
+            ["servo.decrement", "bi-dash-circle-fill", 180, 15],
+            ["servo.start", "bi-skip-start-circle-fill", 210, 15],
           ],
         },
 
@@ -84,8 +84,8 @@
           orbitButtonClass: "orbit-5 shrink-70 range-120",
           orbitAccentClass: "orbit-6 grow-1x range-120",
           buttons: [
-            ["increment", "bi-plus-circle-fill", 0, 30],
-            ["decrement", "bi-dash-circle-fill", 60, 30],
+            ["leds.increment", "bi-plus-circle-fill", 0, 30],
+            ["leds.decrement", "bi-dash-circle-fill", 60, 30],
           ],
         },
 
@@ -94,10 +94,10 @@
           orbitButtonClass: "orbit-5 shrink-70 from-240 range-120",
           orbitAccentClass: "orbit-6 grow-1x from-240 range-120",
           buttons: [
-            ["forward", "bi-arrow-down-circle-fill", 240, 15],
-            ["back", "bi-arrow-left-circle-fill", 270, 15],
-            ["left", "bi-arrow-right-circle-fill", 300, 15],
-            ["right", "bi-arrow-up-circle-fill", 330, 15],
+            ["motor.forward", "bi-arrow-up-circle-fill", 330, 15],
+            ["motor.right", "bi-arrow-right-circle-fill", 300, 15],
+            ["motor.left", "bi-arrow-left-circle-fill", 270, 15],
+            ["motor.backward", "bi-arrow-down-circle-fill", 240, 15],
           ],
         },
       };
@@ -148,6 +148,7 @@
               <${MenuTitle} />
               <${MainMenu} />
               <${SubMenu} onClick=${handleClick} />
+              <${Sensors} />
             </div>
           </div>
         `;
@@ -295,7 +296,7 @@
         onClick,
       }) {
         const handleMouseDown = () => onClick(url, name);
-        const handleMouseUp = () => onClick(url, "control-stp");
+        const handleMouseUp = () => onClick(url, "motor.stop");
 
         return html`
           <!-- Button -->
@@ -337,6 +338,26 @@
               active: active === name,
             })}
           ></o-arc>
+        `;
+      }
+
+      function Sensors() {
+        return html`
+          <div class="orbit-8 sensors">
+            <div class="satellite">
+              <div class="gravity-spot">
+                <div class="orbit">
+                  <div class="satellite grow-1x at-center">60cm</div>
+                </div>
+                <div class="orbit-2 range-180 from-180">
+                  <o-arc shape="circle" class="shrink-50"></o-arc>
+                </div>
+                <div class="orbit-3 range-270 ">
+                  <o-arc shape="circle" class="shrink-50"></o-arc>
+                </div>
+              </div>
+            </div>
+          </div>
         `;
       }
 

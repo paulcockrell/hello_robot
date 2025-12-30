@@ -20,6 +20,11 @@ pub struct ServoCommand {
     pub angle: u8,
 }
 
+#[derive(Debug, Clone)]
+pub struct LedCommand {
+    pub brightness: i8,
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct Ultrasound {
     pub distance: f64,
@@ -36,6 +41,7 @@ pub struct Ldr {
 pub enum Event {
     MotorCommand(MotorCommand),
     ServoCommand(ServoCommand),
+    LedCommand(LedCommand),
     Ultrasound(Ultrasound),
     Ldr(Ldr),
     Shutdown,
