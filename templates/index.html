@@ -419,22 +419,24 @@
         `;
       }
 
-      function mapRange(value, inMin, inMax, outMin, outMax) {
-        return outMin + ((value - inMin) * (outMax - outMin)) / (inMax - inMin);
-      }
-
       function UltrasoundGauge() {
         const SEGMENTS = 18;
 
+        function mapRange(value, inMin, inMax, outMin, outMax) {
+          return (
+            outMin + ((value - inMin) * (outMax - outMin)) / (inMax - inMin)
+          );
+        }
+
         const filledCount = Math.round(
-          mapRange(ultrasoundSensor.value, 1, 100, 0, SEGMENTS),
+          mapRange(ultrasoundSensor.value, 1, 100, 1, SEGMENTS),
         );
 
         return html`
           <div class="orbit-9 from-244 range-120 big-dash">
             ${Array.from({ length: SEGMENTS }).map((_, i) => {
               const visualIndex = SEGMENTS - 1 - i;
-              const isActive = visualIndex < filledCount;
+              const isActive = visualIndex > filledCount;
 
               let color = "green";
               if (i > 8 && i <= 13) color = "orange";
