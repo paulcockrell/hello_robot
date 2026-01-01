@@ -14,6 +14,9 @@
   <body>
     <main class="container">
       <section>
+        <div id="app"></div>
+      </section>
+      <section>
         <h3>Camera</h3>
         <img id="camera" src="/camera/frame.mjpeg" />
       </section>
@@ -21,10 +24,6 @@
         <h3>Sensors</h3>
         <div id="ultrasound_sensor">Loading ultrasound data…</div>
         <div id="ldr_sensor">Loading ldr data…</div>
-      </section>
-
-      <section>
-        <div id="app"></div>
       </section>
     </main>
 
@@ -63,14 +62,17 @@
     <script type="module">
       import { Fragment, render } from "preact";
       import { signal } from "@preact/signals";
+      import { useEffect, useLayoutEffect } from "preact/hooks";
       import { html } from "htm/preact";
 
       const API_BASE_URL = "http://raspberrypi.local:3000/api";
       const SUB_MENUS = {
         servo: {
-          path: "servo",
-          orbitButtonClass: "orbit-5 shrink-70 from-120 range-120",
-          orbitAccentClass: "orbit-6 grow-1x from-120 range-120",
+          path: "servos",
+          orbitButtonClass:
+            "orbit-5 shrink-70 from-120 range-120 submenu-buttons",
+          orbitAccentClass:
+            "orbit-6 grow-1x from-120 range-120 submenu-accents",
           buttons: [
             ["servo.end", "bi-skip-end-circle-fill", 120, 15],
             ["servo.increment", "bi-plus-circle-fill", 150, 15],
@@ -81,8 +83,8 @@
 
         leds: {
           path: "leds",
-          orbitButtonClass: "orbit-5 shrink-70 range-120",
-          orbitAccentClass: "orbit-6 grow-1x range-120",
+          orbitButtonClass: "orbit-5 shrink-70 range-120 submenu-buttons",
+          orbitAccentClass: "orbit-6 grow-1x range-120 submenu-accents",
           buttons: [
             ["leds.increment", "bi-plus-circle-fill", 0, 30],
             ["leds.decrement", "bi-dash-circle-fill", 60, 30],
@@ -91,8 +93,10 @@
 
         motor: {
           path: "motor",
-          orbitButtonClass: "orbit-5 shrink-70 from-240 range-120",
-          orbitAccentClass: "orbit-6 grow-1x from-240 range-120",
+          orbitButtonClass:
+            "orbit-5 shrink-70 from-240 range-120 submenu-buttons",
+          orbitAccentClass:
+            "orbit-6 grow-1x from-240 range-120 submenu-accents",
           buttons: [
             ["motor.forward", "bi-arrow-up-circle-fill", 330, 15],
             ["motor.right", "bi-arrow-right-circle-fill", 300, 15],
@@ -114,6 +118,20 @@
       function App() {
         // If the main menu option changes, reset the submenu option
         mainMenuActive.subscribe(() => (subMenuActive.value = null));
+
+        useLayoutEffect(() => {
+          const resize = () => Orbit.resize(".wrapper");
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(resize);
+          });
+
+          window.addEventListener("resize", resize);
+
+          return () => {
+            window.removeEventListener("resize", resize);
+          };
+        }, []);
 
         const handleClick = async (url, actionName, opts = {}) => {
           subMenuActive.value = actionName;
@@ -143,12 +161,18 @@
         };
 
         return html`
-          <div class="bigbang x-dev-orbit">
-            <div class="gravity-spot menu-example" style="--o-force: 600px">
-              <${MenuTitle} />
-              <${MainMenu} />
-              <${SubMenu} onClick=${handleClick} />
-              <${Sensors} />
+          <div class="wrapper">
+            <div class="bigbang x-dev-orbit">
+              <div class="orbit-scale">
+                <div class="gravity-spot menu-example" style="--o-force: 600px">
+                  <${MenuTitle} />
+                  <${MainMenu} />
+                  <${SubMenu} onClick=${handleClick} />
+                  <${MenuCowl} />
+                  <${LedGauges} />
+                  <${UltrasoundGauge} />
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -166,7 +190,7 @@
         const handleClick = () => (mainMenuActive.value = name.toLowerCase());
 
         return html`<o-arc
-          class="grow-1x control-size"
+          class="grow-1x button control-size"
           onClick=${handleClick}
         ></o-arc>`;
       }
@@ -296,7 +320,7 @@
         onClick,
       }) {
         const handleMouseDown = () => onClick(url, name);
-        const handleMouseUp = () => onClick(url, "motor.stop");
+        const handleMouseUp = () => onClick(url, "control-stp");
 
         return html`
           <!-- Button -->
@@ -341,19 +365,188 @@
         `;
       }
 
-      function Sensors() {
+      function MenuCowl() {
         return html`
-          <div class="orbit-8 sensors">
-            <div class="satellite">
+          <!-- Outer ring -->
+          <div class="orbit-7 shrink-50" style="z-index: -1;">
+            <o-arc
+              class="shrink-90 angle-0 inner-orbit darker-gray big-dash"
+            ></o-arc>
+          </div>
+
+          <!-- Outer ring -->
+          <div class="orbit-8 shrink-50" style="z-index: -1;">
+            <o-arc
+              class="shrink-90 angle-0 inner-orbit darker-gray big-dash"
+            ></o-arc>
+          </div>
+
+          <!-- Vectors -->
+          <div class="orbit-7">
+            <div class="vector angle-0"></div>
+            <div class="vector angle-120"></div>
+            <div class="vector angle-210"></div>
+            <div class="vector angle-240"></div>
+          </div>
+
+          <!-- Readings labels -->
+          <div class="orbit-7 shrink-20 labels">
+            <o-arc text-anchor="middle" class="grow-1x angle-15"
+              >Neopixel lights</o-arc
+            >
+            <o-arc text-anchor="middle" class="grow-1x angle-120"
+              >Light dependent resistors</o-arc
+            >
+            <o-arc text-anchor="middle" class="grow-1x angle-180">Servo</o-arc>
+            <o-arc text-anchor="middle" class="grow-1x angle-250"
+              >Ultrasound distance</o-arc
+            >
+          </div>
+        `;
+      }
+
+      function UltrasoundGauge() {
+        return html`
+          <div class="orbit-9 from-244 range-120 big-dash">
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big green active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big orange active"
+            ></div>
+            <div
+              class="vector shrink-40 outer-orbit dashed-big orange active"
+            ></div>
+            <div class="vector shrink-40 outer-orbit dashed-big orange"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big orange"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big orange"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big red"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big red"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big red"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big red"></div>
+            <div class="vector shrink-40 outer-orbit dashed-big red"></div>
+          </div>
+        `;
+      }
+
+      function LedGauges() {
+        return html`
+          <!-- LDR sensor gauges -->
+          <div class="orbit-9 sensor">
+            <div class="satellite angle-135 ldr grow-1x">L3</div>
+            <div class="satellite angle-165 ldr grow-1x">L2</div>
+            <div class="satellite angle-195 ldr active grow-1x">L1</div>
+          </div>
+
+          <!-- Servo gauges -->
+          <div class="orbit-9 sensor">
+            <div class="satellite angle-225">
               <div class="gravity-spot">
-                <div class="orbit">
-                  <div class="satellite grow-1x at-center">60cm</div>
+                <div class="orbit-0">
+                  <div class="satellite">
+                    <div class="capsule">30</div>
+                  </div>
                 </div>
-                <div class="orbit-2 range-180 from-180">
-                  <o-arc shape="circle" class="shrink-50"></o-arc>
+                <div class="orbit-2 shrink-90">
+                  <o-progress
+                    class="shrink-50 angle-0 white"
+                    value="30"
+                    max="100"
+                    shape="circle"
+                  ></o-progress>
                 </div>
-                <div class="orbit-3 range-270 ">
-                  <o-arc shape="circle" class="shrink-50"></o-arc>
+              </div>
+            </div>
+          </div>
+
+          <!-- LED gauges -->
+          <div class="orbit-9 sensor">
+            <div class="satellite angle-15">
+              <div class="gravity-spot">
+                <div class="orbit-0">
+                  <div class="satellite">
+                    <div class="capsule">30</div>
+                  </div>
+                </div>
+                <div class="orbit-2 shrink-90">
+                  <o-progress
+                    class="shrink-50 angle-0 red"
+                    value="30"
+                    max="255"
+                    shape="circle"
+                  ></o-progress>
+                </div>
+              </div>
+            </div>
+            <div class="satellite angle-45">
+              <div class="gravity-spot">
+                <div class="orbit-0">
+                  <div class="satellite">
+                    <div class="capsule">60</div>
+                  </div>
+                </div>
+                <div class="orbit-2 shrink-90">
+                  <o-progress
+                    class="shrink-50 angle-0 green"
+                    value="60"
+                    max="255"
+                    shape="circle"
+                  ></o-progress>
+                </div>
+              </div>
+            </div>
+            <div class="satellite angle-75">
+              <div class="gravity-spot">
+                <div class="orbit-0">
+                  <div class="satellite">
+                    <div class="capsule">203</div>
+                  </div>
+                </div>
+                <div class="orbit-2 shrink-90">
+                  <o-progress
+                    class="shrink-50 angle-0 cyan"
+                    value="203"
+                    max="255"
+                    shape="circle"
+                  ></o-progress>
+                </div>
+              </div>
+            </div>
+            <div class="satellite angle-105">
+              <div class="gravity-spot">
+                <div class="orbit-0">
+                  <div class="satellite">
+                    <div class="capsule">50</div>
+                  </div>
+                </div>
+                <div class="orbit-2 shrink-90">
+                  <o-progress
+                    class="shrink-50 angle-0 white"
+                    value="50"
+                    max="255"
+                    shape="circle"
+                  ></o-progress>
                 </div>
               </div>
             </div>

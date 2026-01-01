@@ -1,9 +1,34 @@
+.wrapper {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.wrapper > .bigbang {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 100vmin;
+  max-height: 100vmin;
+  display: grid;
+  place-items: center;
+  overflow: visible; /* important */
+}
+
+.orbit-scale {
+  transform: scale(0.8);
+  transform-origin: center;
+}
+
 .accent {
   --o-fill: var(--o-gray-darker);
 }
+
 .accent:hover {
   --o-fill: var(--o-cyan-darker);
 }
+
 .accent.active {
   --o-fill: var(--o-cyan);
 }
@@ -16,13 +41,103 @@
 
 .satellite .capsule {
   color: var(--o-gray-darker);
-  font-size: 1.25em;
+  font-size: 1em;
 }
 
 .main-menu o-arc {
   --o-color: var(--o-gray-darker);
 }
 
-.sensors o-arc {
-  --o-fill: var(--o-cyan-light);
+.cyan {
+  --o-back-fill: var(--o-cyan-darker);
+  --o-fill: var(--o-cyan);
+}
+
+.green {
+  --o-back-fill: var(--o-green-darker);
+  --o-fill: var(--o-green);
+}
+
+.red {
+  --o-back-fill: var(--o-pink-darker);
+  --o-fill: var(--o-pink);
+}
+
+.white {
+  --o-back-fill: var(--o-gray-darker);
+  --o-fill: white;
+}
+
+.darker-gray {
+  --o-back-fill: var(--o-gray-dark);
+  --o-fill: var(--o-gray-darker);
+}
+
+.sensor {
+  font-size: clamp(1rem, 2.5vw, 3rem);
+}
+
+.sensor > .satellite {
+  border-color: transparent;
+  font-size: 0.8em;
+}
+
+.sensor > .satellite.ldr {
+  border: 5px solid var(--o-gray);
+  background-color: var(--o-gray-darker);
+  color: var(--o-gray-lighter);
+}
+.sensor > .satellite.ldr.active {
+  border: 5px solid white;
+}
+
+.sensor > .satellite .capsule {
+  color: var(--o-gray-lighter);
+}
+
+.submenu-buttons {
+  font-size: clamp(1rem, 3.5vw, 3rem);
+}
+
+.submenu-buttons .bi {
+  font-size: 1em;
+}
+
+.labels {
+  --o-fill: none;
+}
+
+.labels > o-arc {
+  --o-fill: none;
+  --o-color: var(--o-gray);
+  font-size: 0.8em;
+}
+
+.dashed-big {
+  opacity: 0.8;
+  height: 6px;
+}
+
+.dashed-big.orange {
+  background: var(--o-orange-darker);
+}
+
+.dashed-big.orange.active {
+  background: var(--o-orange);
+}
+
+.dashed-big.green {
+  background: var(--o-green-darker);
+}
+
+.dashed-big.green.active {
+  background: var(--o-green);
+}
+
+.dashed-big.red {
+  background: var(--o-red-darker);
+}
+
+.dashed-big.red.active {
+  background: var(--o-red);
 }
