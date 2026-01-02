@@ -1,6 +1,51 @@
-.wrapper {
+.hud {
+  position: fixed;
+  inset: 0;
+}
+
+.camera {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
+}
+
+.radial-hud {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+
+  height: clamp(240px, 40vh, 400px);
+  aspect-ratio: 1 / 1;
+
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+/* Blur layer */
+.radial-hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  border-radius: 50%;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
+
+  z-index: 0;
+}
+
+/* Actual controls */
+.radial-hud > * {
+  position: relative;
+  z-index: 1;
+}
+
+.wrapper {
+  height: clamp(300px, 90vh, 600px);
+  width: clamp(300px, 90vh, 600px);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -8,7 +53,6 @@
 
 .wrapper > .bigbang {
   aspect-ratio: 1 / 1;
-  width: 100%;
   max-width: 100vmin;
   max-height: 100vmin;
   display: grid;
@@ -41,7 +85,7 @@
 
 .satellite .capsule {
   color: var(--o-gray-darker);
-  font-size: 1em;
+  font-size: 0.8em;
 }
 
 .main-menu o-arc {
@@ -74,7 +118,7 @@
 }
 
 .sensor {
-  font-size: clamp(1rem, 2.5vw, 3rem);
+  font-size: clamp(0.8rem, 1.5vw, 2rem);
 }
 
 .sensor > .satellite {
@@ -96,7 +140,7 @@
 }
 
 .submenu-buttons {
-  font-size: clamp(1rem, 3.5vw, 3rem);
+  font-size: clamp(1.5rem, 2vw, 2rem);
 }
 
 .submenu-buttons .bi {

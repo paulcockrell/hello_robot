@@ -30,7 +30,7 @@ pub async fn run(bus: EventBus) {
 
             let readings = ldr.readings();
 
-            if readings != last_reading || tick % 10 == 0 {
+            if readings != last_reading || tick.is_multiple_of(10) {
                 last_reading = readings;
                 let (l_val, m_val, r_val) = readings;
 

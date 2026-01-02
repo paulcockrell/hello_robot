@@ -12,14 +12,17 @@
     />
   </head>
   <body>
-    <main class="container">
-      <section>
+    <main class="hud">
+      <img
+        id="camera"
+        class="camera"
+        src="/camera/frame.mjpeg"
+        alt="Robot camera"
+      />
+
+      <div class="radial-hud">
         <div id="app"></div>
-      </section>
-      <section>
-        <h3>Camera</h3>
-        <img id="camera" src="/camera/frame.mjpeg" />
-      </section>
+      </div>
     </main>
 
     <script src="/static/orbit.min.js"></script>
