@@ -1,3 +1,9 @@
+#app {
+  position: absolute;
+  bottom: 1em;
+  right: 1em;
+}
+
 .hud {
   position: fixed;
   inset: 0;
@@ -49,6 +55,11 @@
   display: grid;
   place-items: center;
   overflow: hidden;
+}
+.wrapper {
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
 }
 
 .wrapper > .bigbang {
