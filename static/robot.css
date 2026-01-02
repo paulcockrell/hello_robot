@@ -50,15 +50,14 @@
 }
 
 .wrapper {
-  height: clamp(300px, 90vh, 600px);
-  width: clamp(300px, 90vh, 600px);
+  height: clamp(300px, 90vh, 500px);
+  width: clamp(300px, 90vh, 500px);
   display: grid;
   place-items: center;
   overflow: hidden;
-}
-.wrapper {
+
   backdrop-filter: blur(6px);
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 50%;
 }
 
