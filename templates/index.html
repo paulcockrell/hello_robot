@@ -86,6 +86,7 @@
       const subMenuActive = signal(null);
       const ultrasoundSensor = signal(null);
       const ldrSensor = signal(null);
+      const ledSensor = signal(null);
 
       const cx = (obj) =>
         Object.entries(obj)
@@ -117,6 +118,10 @@
 
               if (msg.Ldr) {
                 ldrSensor.value = msg.Ldr;
+              }
+
+              if (msg.Led) {
+                ledSensor.value = msg.Led;
               }
             };
 
@@ -168,7 +173,6 @@
             }
 
             const result = await response.json();
-            console.log(result);
           } catch (error) {
             console.error("Error making request", error);
           }
@@ -184,6 +188,8 @@
                   <${SubMenu} onClick=${handleClick} />
                   <${MenuCowl} />
                   <${LedGauges} />
+                  <${LdrGauges} />
+                  <${ServoGauges} />
                   <${UltrasoundGauge} />
                 </div>
               </div>
@@ -462,16 +468,32 @@
         `;
       }
 
-      function LedGauges() {
-        return html`
-          <!-- LDR sensor gauges -->
-          <div class="orbit-9 sensor">
-            <div class="satellite angle-135 ldr grow-1x">L3</div>
-            <div class="satellite angle-165 ldr grow-1x">L2</div>
-            <div class="satellite angle-195 ldr active grow-1x">L1</div>
-          </div>
+      function LdrGauges() {
+        const { l_val, m_val, r_val } = ldrSensor.value || {};
 
-          <!-- Servo gauges -->
+        return html`
+          <div class="orbit-9 sensor">
+            <div
+              class=${`satellite angle-135 ldr ${r_val === 1 ? "active" : ""} grow-1x`}
+            >
+              R
+            </div>
+            <div
+              class=${`satellite angle-165 ldr ${m_val === 1 ? "active" : ""} grow-1x`}
+            >
+              M
+            </div>
+            <div
+              class=${`satellite angle-195 ldr ${l_val === 1 ? "active" : ""} grow-1x`}
+            >
+              L
+            </div>
+          </div>
+        `;
+      }
+
+      function ServoGauges() {
+        return html`
           <div class="orbit-9 sensor">
             <div class="satellite angle-225">
               <div class="gravity-spot">
@@ -491,20 +513,25 @@
               </div>
             </div>
           </div>
+        `;
+      }
 
-          <!-- LED gauges -->
+      function LedGauges() {
+        const { red, green, blue, brightness } = ledSensor.value || {};
+
+        return html`
           <div class="orbit-9 sensor">
             <div class="satellite angle-15">
               <div class="gravity-spot">
                 <div class="orbit-0">
                   <div class="satellite">
-                    <div class="capsule">30</div>
+                    <div class="capsule">${red || 0}</div>
                   </div>
                 </div>
                 <div class="orbit-2 shrink-90">
                   <o-progress
                     class="shrink-50 angle-0 red"
-                    value="30"
+                    value=${red || 0}
                     max="255"
                     shape="circle"
                   ></o-progress>
@@ -515,13 +542,13 @@
               <div class="gravity-spot">
                 <div class="orbit-0">
                   <div class="satellite">
-                    <div class="capsule">60</div>
+                    <div class="capsule">${green || 0}</div>
                   </div>
                 </div>
                 <div class="orbit-2 shrink-90">
                   <o-progress
                     class="shrink-50 angle-0 green"
-                    value="60"
+                    value=${green || 0}
                     max="255"
                     shape="circle"
                   ></o-progress>
@@ -532,13 +559,13 @@
               <div class="gravity-spot">
                 <div class="orbit-0">
                   <div class="satellite">
-                    <div class="capsule">203</div>
+                    <div class="capsule">${blue || 0}</div>
                   </div>
                 </div>
                 <div class="orbit-2 shrink-90">
                   <o-progress
                     class="shrink-50 angle-0 cyan"
-                    value="203"
+                    value=${blue || 0}
                     max="255"
                     shape="circle"
                   ></o-progress>
@@ -549,13 +576,13 @@
               <div class="gravity-spot">
                 <div class="orbit-0">
                   <div class="satellite">
-                    <div class="capsule">50</div>
+                    <div class="capsule">${brightness || 0}</div>
                   </div>
                 </div>
                 <div class="orbit-2 shrink-90">
                   <o-progress
                     class="shrink-50 angle-0 white"
-                    value="50"
+                    value=${brightness || 0}
                     max="255"
                     shape="circle"
                   ></o-progress>

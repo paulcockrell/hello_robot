@@ -36,8 +36,6 @@ pub async fn run(bus: EventBus) {
                     m_val,
                     r_val,
                 }));
-
-                println!("l_val={l_val}, m_val={m_val}, r_val={r_val}");
             }
 
             std::thread::sleep(Duration::from_millis(100));

@@ -37,6 +37,14 @@ pub struct Ldr {
     pub r_val: u8,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct Led {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+    pub brightness: u8,
+}
+
 #[derive(Debug, Clone)]
 pub enum Event {
     MotorCommand(MotorCommand),
@@ -44,5 +52,7 @@ pub enum Event {
     LedCommand(LedCommand),
     Ultrasound(Ultrasound),
     Ldr(Ldr),
+    #[allow(dead_code)]
+    Led(Led),
     Shutdown,
 }
