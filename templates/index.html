@@ -48,8 +48,8 @@
           orbitAccentClass:
             "orbit-6 grow-1x from-120 range-120 submenu-accents",
           buttons: [
-            ["servo.end", "bi-skip-end-circle-fill", 120, 30],
-            ["servo.start", "bi-skip-start-circle-fill", 180, 30],
+            ["servo.end", "bi-arrow-up-circle-fill", 120, 30],
+            ["servo.start", "bi-arrow-down-circle-fill", 180, 30],
           ],
         },
 
@@ -83,7 +83,8 @@
       const subMenuActive = signal(null);
       const ultrasoundSensor = signal(null);
       const ldrSensor = signal(null);
-      const ledSensor = signal(null);
+      const ledPeripheral = signal(null);
+      const servoPeripheral = signal(null);
 
       const cx = (obj) =>
         Object.entries(obj)
@@ -118,7 +119,11 @@
               }
 
               if (msg.Led) {
-                ledSensor.value = msg.Led;
+                ledPeripheral.value = msg.Led;
+              }
+
+              if (msg.Servo) {
+                servoPeripheral.value = msg.Servo;
               }
             };
 
@@ -516,20 +521,22 @@
       }
 
       function ServoGauges() {
+        const angle = servoPeripheral.value?.angle || 0;
+
         return html`
           <div class="orbit-10 sensor">
             <div class="satellite angle-225">
               <div class="gravity-spot">
                 <div class="orbit-0">
                   <div class="satellite">
-                    <div class="capsule">30</div>
+                    <div class="capsule">${angle}</div>
                   </div>
                 </div>
                 <div class="orbit-2 shrink-90">
                   <o-progress
                     class="shrink-50 angle-0 white"
-                    value="30"
-                    max="100"
+                    value=${angle}
+                    max="180"
                     shape="circle"
                   ></o-progress>
                 </div>
@@ -540,7 +547,7 @@
       }
 
       function LedGauges() {
-        const { red, green, blue, brightness } = ledSensor.value || {};
+        const { red, green, blue, brightness } = ledPeripheral.value || {};
 
         return html`
           <div class="orbit-10 sensor from-15 range-120">

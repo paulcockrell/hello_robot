@@ -3,7 +3,7 @@ use tokio::sync::broadcast;
 
 use crate::{
     AppState,
-    bus::event::{Event, Ldr, Led, Ultrasound},
+    bus::event::{Event, Ldr, Led, ServoCommand, Ultrasound},
 };
 
 #[derive(Serialize, Clone)]
@@ -11,6 +11,7 @@ pub enum Telemetry {
     Ultrasound(Ultrasound),
     Ldr(Ldr),
     Led(Led),
+    Servo(ServoCommand),
 }
 
 pub type TelemetryTx = broadcast::Sender<Telemetry>;
@@ -30,6 +31,9 @@ pub async fn run(app_state: AppState) {
             }
             Event::Led(led) => {
                 let _ = app_state.telemetry_tx.send(Telemetry::Led(led));
+            }
+            Event::Servo(servo) => {
+                let _ = app_state.telemetry_tx.send(Telemetry::Servo(servo));
             }
             Event::Shutdown => {
                 println!("Telemetry node shutting down");

@@ -1,7 +1,10 @@
 use std::{sync::mpsc, time::Duration};
 
 use crate::{
-    bus::{event::Event, event_bus::EventBus},
+    bus::{
+        event::{Event, ServoCommand},
+        event_bus::EventBus,
+    },
     hal::servo::Servo,
 };
 
@@ -25,6 +28,7 @@ use crate::{
 //                     │ controls hardware
 pub async fn run(bus: EventBus) {
     let mut bus_rx = bus.subscribe();
+    let bus_tx = bus.clone();
 
     // Channel between async world and blocking servo thread
     let (tx, rx) = mpsc::channel::<u8>();
@@ -41,6 +45,8 @@ pub async fn run(bus: EventBus) {
                     if last_angle != Some(angle) {
                         let _ = servo.set_angle(angle);
                         last_angle = Some(angle);
+
+                        bus_tx.publish(Event::Servo(ServoCommand { angle }));
                     }
                 }
                 Err(mpsc::RecvTimeoutError::Timeout) => {

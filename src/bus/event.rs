@@ -15,7 +15,7 @@ pub struct MotorCommand {
     pub speed: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ServoCommand {
     pub angle: u8,
 }
@@ -60,5 +60,7 @@ pub enum Event {
     Ldr(Ldr),
     #[allow(dead_code)]
     Led(Led),
+    #[allow(dead_code)]
+    Servo(ServoCommand),
     Shutdown,
 }
