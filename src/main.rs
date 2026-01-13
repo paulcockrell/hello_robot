@@ -43,6 +43,7 @@ async fn main() {
         tokio::spawn(nodes::camera::run(app_state.clone())),
         tokio::spawn(nodes::web::run(app_state.clone())),
         tokio::spawn(nodes::telemetry_bridge::run(app_state.clone())),
+        tokio::spawn(nodes::behaviour::run(app_state.clone())),
     ];
 
     // Local hardware node

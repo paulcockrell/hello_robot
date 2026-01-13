@@ -1,3 +1,4 @@
+pub mod behaviour;
 pub mod camera;
 pub mod ldr;
 pub mod leds;

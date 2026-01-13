@@ -79,6 +79,7 @@
         },
       };
 
+      const robotMode = signal("manual");
       const mainMenuActive = signal(null);
       const subMenuActive = signal(null);
       const ultrasoundSensor = signal(null);
@@ -154,9 +155,13 @@
           };
         }, []);
 
-        const handleClick = async (url, actionName, opts = {}) => {
-          subMenuActive.value = actionName;
+        const processResult = (actionName, result, tops) => {
+          if (["mode.manual", "mode.automatic"].includes(actionName)) {
+            robotMode.value = result.mode;
+          }
+        };
 
+        const submit = async (url, actionName, opts = {}) => {
           const method = "post";
           const body = JSON.stringify({ action: actionName, ...opts });
           const headers = new Headers();
@@ -170,13 +175,33 @@
             });
 
             if (!response.ok) {
+              // TODO add an error notice on screen
               console.error("Error processing request", response.status);
               return;
             }
 
             const result = await response.json();
+            processResult(actionName, result, opts);
           } catch (error) {
             console.error("Error making request", error);
+          }
+        };
+
+        const handleClick = async (url, actionName, opts = {}) => {
+          subMenuActive.value = actionName;
+          await submit(url, actionName, opts);
+        };
+
+        const handleMouseUp = async (url, actionName, opts = {}) => {
+          if (
+            [
+              "motor.forward",
+              "motor.backward",
+              "motor.left",
+              "motor.right",
+            ].includes(actionName)
+          ) {
+            await submit(url, "motor.stop", opts);
           }
         };
 
@@ -187,7 +212,10 @@
                 <div class="gravity-spot menu-example" style="--o-force: 600px">
                   <${MenuTitle} />
                   <${MainMenu} />
-                  <${SubMenu} onClick=${handleClick} />
+                  <${SubMenu}
+                    onClick=${handleClick}
+                    onMouseUp=${handleMouseUp}
+                  />
                   <${MenuCowl} />
                   <${LedGauges} />
                   <${LdrGauges} />
@@ -201,9 +229,11 @@
       }
 
       function MenuTitle() {
+        const mode = robotMode.value;
+
         return html`
           <div class="orbit-0">
-            <div class="capsule at-center">MENU</div>
+            <div class="capsule at-center">${mode}</div>
           </div>
         `;
       }
@@ -286,7 +316,7 @@
         `;
       }
 
-      function SubMenu({ onClick }) {
+      function SubMenu({ onClick, onMouseUp }) {
         if (!mainMenuActive.value) return html`<${Fragment} />`;
 
         return html`
@@ -294,12 +324,13 @@
             name=${mainMenuActive.value}
             config=${SUB_MENUS[mainMenuActive.value]}
             onClick=${onClick}
+            onMouseUp=${onMouseUp}
             active=${subMenuActive.value}
           />
         `;
       }
 
-      function SubMenuBuilder({ name, config, onClick, active }) {
+      function SubMenuBuilder({ name, config, onClick, onMouseUp, active }) {
         const url = `${API_BASE_URL}/${config.path}`;
 
         return html`
@@ -312,6 +343,7 @@
                   angle=${angle}
                   labelAngle=${angle + offset}
                   onClick=${onClick}
+                  onMouseUp=${onMouseUp}
                   url=${url}
                   key=${`orbit-action-button-${name}`}
                 />`,
@@ -340,9 +372,10 @@
         active,
         url,
         onClick,
+        onMouseUp,
       }) {
         const handleMouseDown = () => onClick(url, name);
-        const handleMouseUp = () => onClick(url, "motor.stop");
+        const handleMouseUp = () => onMouseUp(url, name);
 
         return html`
           <!-- Button -->
@@ -479,11 +512,11 @@
               if (i > 13) color = "red";
 
               const klass = `
-                vector
-    dashed-big
-                ${color}
-                ${isActive ? "active grow-0.2x" : "shrink-40"}
-              `;
+                  vector
+      dashed-big
+                  ${color}
+                  ${isActive ? "active grow-0.2x" : "shrink-40"}
+                `;
 
               return html`
                 <div

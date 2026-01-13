@@ -1,11 +1,13 @@
 use axum::body::{Body, Bytes};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Json, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::{Router, response::Html, routing::get, routing::post};
 use futures::stream;
 use serde::Deserialize;
+use serde::Serialize;
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,6 +25,16 @@ use crate::nodes::telemetry_bridge::TelemetryTx;
 #[derive(Debug, Deserialize)]
 struct WebCommand {
     action: String,
+}
+
+#[derive(Serialize)]
+pub struct ModeResponse {
+    mode: Mode,
+}
+
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    error: String,
 }
 
 pub async fn run(app_state: AppState) {
@@ -142,16 +154,28 @@ async fn servo_command(
 async fn mode_command(
     State(app_state): State<AppState>,
     Json(payload): Json<WebCommand>,
-) -> impl IntoResponse {
-    println!("Received leds command {:?}", payload);
+) -> Response {
+    println!("Received mode command {:?}", payload);
 
-    match payload.action.as_str() {
-        "mode.manual" => mode_handler(app_state, Mode::Manual),
-        "mode.automatic" => mode_handler(app_state, Mode::Automatic),
-        _ => println!("Unknown command"),
+    let mode = match payload.action.as_str() {
+        "mode.manual" => Ok(Mode::Manual),
+        "mode.automatic" => Ok(Mode::Automatic),
+        _ => Err("Unknown mode"),
+    };
+
+    match mode {
+        Ok(mode) => {
+            mode_handler(app_state, mode);
+            (StatusCode::OK, Json(ModeResponse { mode })).into_response()
+        }
+        Err(err) => (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: err.to_string(),
+            }),
+        )
+            .into_response(),
     }
-
-    "Ok"
 }
 
 fn motor_foreward_handler(app_state: AppState) {
@@ -205,10 +229,11 @@ fn servo_handler(app_state: AppState, angle: u8) {
     app_state.bus.publish(Event::ServoCommand(cmd));
 }
 
-fn mode_handler(app_state: AppState, mode: Mode) {
+fn mode_handler(app_state: AppState, mode: Mode) -> Mode {
     let cmd = ModeCommand { mode };
-
     app_state.bus.publish(Event::ModeCommand(cmd));
+
+    mode
 }
 
 async fn mjpeg_handler(State(app_state): State<AppState>) -> impl IntoResponse {

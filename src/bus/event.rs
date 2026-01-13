@@ -20,7 +20,8 @@ pub struct ServoCommand {
     pub angle: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Mode {
     Manual,
     Automatic,
