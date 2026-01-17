@@ -1,4 +1,4 @@
-#app {
+#main-menu {
   position: absolute;
   bottom: 1em;
   right: 1em;
@@ -179,4 +179,27 @@
 
   pointer-events: none;
   user-select: none;
+}
+
+.command-history {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  height: 80vh;
+  max-width: 400px;
+  min-width: 200px;
+}
+
+.command-history ul {
+  padding: 0;
+}
+
+.command-history ul li {
+  list-style: none;
+  color: rgba(255, 255, 255, 0.5);
 }

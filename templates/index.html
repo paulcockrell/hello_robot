@@ -35,7 +35,7 @@
 
     <script type="module">
       import { Fragment, render } from "preact";
-      import { signal } from "@preact/signals";
+      import { signal, computed } from "@preact/signals";
       import { useEffect, useRef, useLayoutEffect } from "preact/hooks";
       import { html } from "htm/preact";
 
@@ -163,12 +163,10 @@
         };
 
         const updateCommandHistory = (actionName, status) => {
-          if (commandHistory.value.length >= 20) {
-            commandHistory.value.shift();
-          }
-
           const command = `${actionName} - ${status}`;
-          commandHistory.value.push(command);
+          commandHistory.value = commandHistory.value
+            .concat(command)
+            .slice(-20);
         };
 
         const submit = async (url, actionName, opts = {}) => {
@@ -220,25 +218,29 @@
         };
 
         return html`
-          <div class="wrapper">
-            <div class="bigbang x-dev-orbit">
-              <div class="orbit-scale">
-                <div class="gravity-spot menu-example" style="--o-force: 600px">
-                  <${MenuTitle} />
-                  <${MainMenu} />
-                  <${SubMenu}
-                    onClick=${handleClick}
-                    onMouseUp=${handleMouseUp}
-                  />
-                  <${MenuCowl} />
-                  <${LedGauges} />
-                  <${LdrGauges} />
-                  <${ServoGauges} />
-                  <${UltrasoundGauge} />
+          <div>
+            <div id="main-menu" class="wrapper">
+              <div class="bigbang x-dev-orbit">
+                <div class="orbit-scale">
+                  <div
+                    class="gravity-spot menu-example"
+                    style="--o-force: 600px"
+                  >
+                    <${MenuTitle} />
+                    <${MainMenu} />
+                    <${SubMenu}
+                      onClick=${handleClick}
+                      onMouseUp=${handleMouseUp}
+                    />
+                    <${MenuCowl} />
+                    <${LedGauges} />
+                    <${LdrGauges} />
+                    <${ServoGauges} />
+                    <${UltrasoundGauge} />
+                  </div>
                 </div>
               </div>
             </div>
-
             <${CommandHistory} />
           </div>
         `;
@@ -528,11 +530,11 @@
               if (i > 13) color = "red";
 
               const klass = `
-                  vector
-      dashed-big
-                  ${color}
-                  ${isActive ? "active grow-0.2x" : "shrink-40"}
-                `;
+                        vector
+            dashed-big
+                        ${color}
+                        ${isActive ? "active grow-0.2x" : "shrink-40"}
+                      `;
 
               return html`
                 <div
@@ -673,12 +675,11 @@
       }
 
       function CommandHistory() {
-        console.log("XXX command history", commandHistory.value);
-        return html`
-          <div class="commandHistory">
+        return html` <div class="command-history">
+          <ul>
             ${commandHistory.value.map((val) => html`<li>${val}</li>`)}
-          </div>
-        `;
+          </ul>
+        </div>`;
       }
 
       render(html`<${App} />`, document.getElementById("app"));
