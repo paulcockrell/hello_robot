@@ -28,6 +28,16 @@ struct WebCommand {
 }
 
 #[derive(Serialize)]
+pub struct MotorResponse<'a> {
+    command: &'a str,
+}
+
+#[derive(Serialize)]
+pub struct ServoResponse {
+    angle: u8,
+}
+
+#[derive(Serialize)]
 pub struct ModeResponse {
     mode: Mode,
 }
@@ -124,7 +134,38 @@ async fn motor_command(
 ) -> impl IntoResponse {
     println!("Received motor command {:?}", payload);
 
-    match payload.action.as_str() {
+    let motor_command = match payload.action.as_str() {
+        "motor.forward" => Ok(payload.action),
+        "motor.backward" => Ok(payload.action),
+        "motor.left" => Ok(payload.action),
+        "motor.right" => Ok(payload.action),
+        "motor.stop" => Ok(payload.action),
+        _ => Err("Unknown motor command"),
+    };
+
+    match motor_command {
+        Ok(command) => {
+            motor_handler(app_state, command.as_str());
+            (
+                StatusCode::OK,
+                Json(MotorResponse {
+                    command: command.as_str(),
+                }),
+            )
+                .into_response()
+        }
+        Err(err) => (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: err.to_string(),
+            }),
+        )
+            .into_response(),
+    }
+}
+
+fn motor_handler(app_state: AppState, command: &str) {
+    match command {
         "motor.forward" => motor_foreward_handler(app_state),
         "motor.backward" => motor_backward_handler(app_state),
         "motor.left" => motor_left_handler(app_state),
@@ -132,8 +173,6 @@ async fn motor_command(
         "motor.stop" => motor_stop_handler(app_state),
         _ => println!("Unknown command"),
     }
-
-    "Ok"
 }
 
 async fn servo_command(
@@ -142,13 +181,25 @@ async fn servo_command(
 ) -> impl IntoResponse {
     println!("Received servo command {:?}", payload);
 
-    match payload.action.as_str() {
-        "servo.start" => servo_handler(app_state, 10),
-        "servo.end" => servo_handler(app_state, 170),
-        _ => println!("Unknown command"),
-    }
+    let servo_state = match payload.action.as_str() {
+        "servo.start" => Ok(10),
+        "servo.end" => Ok(170),
+        _ => Err("Out of bounds angle"),
+    };
 
-    "Ok"
+    match servo_state {
+        Ok(angle) => {
+            servo_handler(app_state, angle);
+            (StatusCode::OK, Json(ServoResponse { angle })).into_response()
+        }
+        Err(err) => (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: err.to_string(),
+            }),
+        )
+            .into_response(),
+    }
 }
 
 async fn mode_command(

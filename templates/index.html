@@ -86,6 +86,7 @@
       const ldrSensor = signal(null);
       const ledPeripheral = signal(null);
       const servoPeripheral = signal(null);
+      const commandHistory = signal([]);
 
       const cx = (obj) =>
         Object.entries(obj)
@@ -161,6 +162,15 @@
           }
         };
 
+        const updateCommandHistory = (actionName, status) => {
+          if (commandHistory.value.length >= 20) {
+            commandHistory.value.shift();
+          }
+
+          const command = `${actionName} - ${status}`;
+          commandHistory.value.push(command);
+        };
+
         const submit = async (url, actionName, opts = {}) => {
           const method = "post";
           const body = JSON.stringify({ action: actionName, ...opts });
@@ -168,6 +178,8 @@
           headers.append("Content-Type", "application/json");
 
           try {
+            updateCommandHistory(actionName, "pending");
+
             const response = await fetch(url, {
               method,
               headers,
@@ -175,15 +187,17 @@
             });
 
             if (!response.ok) {
-              // TODO add an error notice on screen
+              updateCommandHistory(actionName, "error");
               console.error("Error processing request", response.status);
               return;
             }
 
             const result = await response.json();
             processResult(actionName, result, opts);
+            updateCommandHistory(actionName, "success");
           } catch (error) {
             console.error("Error making request", error);
+            updateCommandHistory(actionName, "error");
           }
         };
 
@@ -224,6 +238,8 @@
                 </div>
               </div>
             </div>
+
+            <${CommandHistory} />
           </div>
         `;
       }
@@ -652,6 +668,15 @@
                 </div>
               </div>
             </div>
+          </div>
+        `;
+      }
+
+      function CommandHistory() {
+        console.log("XXX command history", commandHistory.value);
+        return html`
+          <div class="commandHistory">
+            ${commandHistory.value.map((val) => html`<li>${val}</li>`)}
           </div>
         `;
       }

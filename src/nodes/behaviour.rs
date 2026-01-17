@@ -12,27 +12,21 @@ pub async fn run(app_state: AppState) {
     loop {
         tokio::select! {
             Ok(event)=bus_rx.recv() => {
-                match event {
-                    Event::ModeCommand(new_mode) => {
-                        mode = new_mode.mode;
-                        println!("Mode changed to {:?}", mode);
-                    }
-                    _=>{}
+                if let Event::ModeCommand(new_mode) = event {
+                    mode = new_mode.mode;
+                    println!("mode changed to {:?}", mode);
                 }
             }
-
-                _ = tick.tick() => {
-                    if mode == Mode::Manual {
-                        // TODO do something?
-                        // let cmd = auto_wander(last_distance);
-                        // bus_rx.publish(cmd);
-                    }
-                    if mode == Mode::Automatic {
-                        // TODO do something?
-                    }
+            _ = tick.tick() => {
+                if mode == Mode::Manual {
+                    // TODO do something?
+                    // let cmd = auto_wander(last_distance);
+                    // bus_rx.publish(cmd);
                 }
-
-
+                if mode == Mode::Automatic {
+                    // TODO do something?
+                }
+            }
         }
     }
 }
