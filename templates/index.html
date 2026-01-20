@@ -694,9 +694,9 @@
         return html` <div class="command-history">
           <div class="heading">command history</div>
           <ul>
-            ${commandHistory.value.map(
-              (val) => html`<li>${val.actionName} ${val.status}</li>`,
-            )}
+            ${commandHistory.value
+              .map((val) => html`<li>${val.actionName} ${val.status}</li>`)
+              .reverse()}
           </ul>
         </div>`;
       }
