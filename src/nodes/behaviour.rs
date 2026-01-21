@@ -12,7 +12,6 @@ pub async fn run(app_state: AppState) {
     let mut mode = Mode::Manual;
     let mut last_distance = 999.9;
     let mut tick = tokio::time::interval(Duration::from_millis(200));
-    let mut new_intent: Option<MotorDirection> = Some(MotorDirection::Forward);
     let mut last_intent: Option<MotorDirection> = None;
 
     loop {
@@ -22,18 +21,26 @@ pub async fn run(app_state: AppState) {
                     Event::ModeCommand(new_mode) =>  {
                         mode = new_mode.mode;
 
-                        if mode == Mode::Manual {
-                            // Reset intents
-                            new_intent = Some(MotorDirection::Forward);
-                            last_intent = None;
+                        match mode {
+                            Mode::Manual => {
+                                // Reset auto intents
+                                last_intent = None;
 
-                            // Issue all stop
-                            let cmd = MotorCommand {
-                                direction: MotorDirection::Stop,
-                                speed: 0,
-                            };
+                                // Issue all stop
+                                let cmd = MotorCommand {
+                                    direction: MotorDirection::Stop,
+                                    speed: 0,
+                                };
 
-                            bus_tx.publish(Event::MotorCommand(cmd));
+                                bus_tx.publish(Event::MotorCommand(cmd));
+                            }
+
+                            Mode::Automatic => {
+                                // Reset auto intents
+                                last_intent = None;
+
+                                println!("[auto] behaviour reset");
+                            }
                         }
 
                         println!("Mode changed to {:?}", mode);
@@ -44,15 +51,15 @@ pub async fn run(app_state: AppState) {
             }
             _ = tick.tick() => {
                 if mode == Mode::Automatic {
-                    if last_distance < 10.0 {
+                    let new_intent = if last_distance < 10.0 {
                         if last_intent.as_ref() == Some(&MotorDirection::Forward) {
-                            new_intent = Some(random_avoidance_intent());
+                            Some(random_avoidance_intent())
                         } else {
-                            new_intent = last_intent.clone();
+                            last_intent.clone()
                         }
                     } else {
-                        new_intent = Some(MotorDirection::Forward);
-                    }
+                        Some(MotorDirection::Forward)
+                    };
 
                     if new_intent.as_ref() != last_intent.as_ref() {
                         if let Some(intent) = new_intent.as_ref() {
