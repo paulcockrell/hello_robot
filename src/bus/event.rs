@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum MotorDirection {
     Forward,
     Backward,
@@ -9,7 +9,7 @@ pub enum MotorDirection {
     Stop,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MotorCommand {
     pub direction: MotorDirection,
     pub speed: u8,
@@ -52,15 +52,6 @@ pub struct Led {
     pub brightness: u8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum DriveIntent {
-    Forward,
-    Backward,
-    TurnLeft,
-    TurnRight,
-    Stop,
-}
-
 #[derive(Debug, Clone)]
 pub enum Event {
     MotorCommand(MotorCommand),
@@ -73,5 +64,4 @@ pub enum Event {
     #[allow(dead_code)]
     Servo(ServoCommand),
     Shutdown,
-    DriveIntent(DriveIntent),
 }
