@@ -107,6 +107,77 @@ The static files live in the `static/` and `templates/` folders.
 - `templates/` – HTML templates for pages
 - `Cargo.toml` – Rust package config
 
+### Robot Operating System Architecture
+
+The core of this project is a custom robot operating system written in Rust.
+Rather than using an existing robotics framework (e.g. ROS), the system is structured around a small set of explicit layers focused on clarity, testability, and real-time behaviour.
+
+The main OS components live under src/ and are organised as follows:
+
+src/
+├── bus/
+├── hal/
+└── nodes/
+
+`bus/` **— Event Bus & Messaging**
+
+The `bus` module provides the _core communication mechanism_ of the robot OS.
+
+- Defines the event types used across the system (commands, sensor updates, state changes, mode switches, etc.)
+- Implements a publish/subscribe event bus
+- Decouples producers (sensors, UI, behaviours) from consumers (motors, controllers, loggers)
+
+This allows individual components to operate independently and asynchronously, while still reacting to shared system state.
+
+This is the robot’s _nervous system_.
+
+---
+
+`hal/` **— Hardware Abstraction Layer**
+
+The `hal` module is the **hardware abstraction layer**.
+
+- Wraps low-level hardware access (motors, sensors, LEDs, camera, GPIO, I2C, etc.)
+- Exposes hardware functionality via clean, Rust-friendly interfaces
+- Isolates platform-specific details from the rest of the system
+
+Nothing outside `hal` talks directly to hardware.
+This keeps the higher-level logic portable and focused on behaviour rather than wiring details.
+
+---
+
+`nodes/` **— Robot Behaviour & Control Nodes**
+
+The `nodes` module contains the **active runtime components** of the robot.
+
+Each node is an independent async task responsible for a specific concern, for example:
+
+- Motor control
+- Sensor polling
+- Autonomous behaviour
+- Manual control
+- UI command handling
+
+Nodes communicate exclusively via the event bus and do not call each other directly.
+
+This mirrors a robotics “node” model, but implemented deliberately and minimally rather than via a full framework.
+
+---
+
+**Design Goals**
+
+- **Explicit architecture** over magic frameworks
+- **Async, event-driven design** suitable for real hardware
+- Clear separation between:
+  - hardware access
+  - messaging
+  - behaviour
+- Easy to extend with new nodes, hardware, or control modes
+
+The physical robot is intentionally simple so that the focus remains on the software architecture and control system design.
+
+---
+
 ## License
 
 MIT — see the `LICENSE` file.
