@@ -2,6 +2,8 @@
 
 A simple Raspberry Pi-based robot control system written in Rust, with a lightweight web interface for manual control.
 
+![Hello, Robot! Rust edition](./static/hello_robot.png)
+
 The kit can be found [here](https://www.aliexpress.com/p/tesla-landing/index.html?UTABTest=aliabtest128998_32160&src=bing&albch=shopping&acnt=135105396&albcp=555690814&albag=1304022061862648&slnk=&trgt=pla-2333301113533049&plac=&crea=81501442626688&netw=s&device=c&mtctp=e&utm_source=Bing&utm_medium=shopping&utm_campaign=PA_Bing_%20GB_PMAX_9_MAXV__AESupply_26.1.23_hylt_1004266343&utm_content=AssetGroup_102125_153753&utm_term=Adeept%204WD%20Smart%20Robot%20Kit&msclkid=1ec982150c9413f981fdeb9da447c8bd&aff_fcid=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&aff_fsk=UneMJZVf&aff_platform=aaf&sk=UneMJZVf&aff_trace_key=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&terminal_id=4274b293fbe04386a62969acb4466e0d&scenario=c_ppc_item_bridge&productId=1005009982011552&_immersiveMode=true&withMainCard=true&OLP=1123114608_f_group1&o_s_id=1123114608).
 
 This repo contains:
@@ -15,6 +17,7 @@ _It is a learning project, meant to explore hardware control and UI design in Ru
 What this actually does
 
 - Drives motors and servos via GPIO
+- Reads ultrasound and ldr sensors
 - Controls RGB LEDs
 - Serves a browser UI to control the robot in real time
 - Runs entirely on a Raspberry Pi
