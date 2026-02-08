@@ -38,6 +38,22 @@ curl https://sh.rustup.rs -sSf | sh
 
 Make sure ~/.cargo/bin is in your PATH.
 
+2. System packages
+
+```bash
+sudo apt update
+sudo apt install -y \
+  libopencv-dev \
+  libclang-dev \
+  clang \
+  pkg-config \
+  libcamera-apps \
+  gstreamer1.0-tools \
+  gstreamer1.0-libcamera
+```
+
+**Note**: `OpenCV` is used only as a Rust-friendly interface to a GStreamer camera pipeline and for JPEG encoding — no computer vision processing is performed (yet!).
+
 ---
 
 2. Build the project
