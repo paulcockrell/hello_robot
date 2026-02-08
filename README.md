@@ -1,110 +1,92 @@
-# LDR POC
+# hello_robot
 
-POC for using Rust and PIGPIO to read LDR sensors on a RaspberryPI >= 4
+A simple Raspberry Pi-based robot control system written in Rust, with a lightweight web interface for manual control.
 
-## PI Setup
+The kit can be found [here](https://www.aliexpress.com/p/tesla-landing/index.html?UTABTest=aliabtest128998_32160&src=bing&albch=shopping&acnt=135105396&albcp=555690814&albag=1304022061862648&slnk=&trgt=pla-2333301113533049&plac=&crea=81501442626688&netw=s&device=c&mtctp=e&utm_source=Bing&utm_medium=shopping&utm_campaign=PA_Bing_%20GB_PMAX_9_MAXV__AESupply_26.1.23_hylt_1004266343&utm_content=AssetGroup_102125_153753&utm_term=Adeept%204WD%20Smart%20Robot%20Kit&msclkid=1ec982150c9413f981fdeb9da447c8bd&aff_fcid=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&aff_fsk=UneMJZVf&aff_platform=aaf&sk=UneMJZVf&aff_trace_key=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&terminal_id=4274b293fbe04386a62969acb4466e0d&scenario=c_ppc_item_bridge&productId=1005009982011552&_immersiveMode=true&withMainCard=true&OLP=1123114608_f_group1&o_s_id=1123114608).
 
-Install build dependencies
+This repo contains:
 
-```bash
-sudo apt update
-sudo apt install -y libclang-dev clang llvm libopencv-dev pkg-config
+- Rust code driving motors, servos, LEDs, and basic sensors
+- A web interface for controlling the robot and observing status
+- Static assets and templates for the web UI
 
-```
+_It is a learning project, meant to explore hardware control and UI design in Rust._
 
-You must be running 64 Bit image (Trixie) for these steps to work.
+What this actually does
 
-```bash
-sudo nano /boot/firmware/config.txt
-```
+- Drives motors and servos via GPIO
+- Controls RGB LEDs
+- Serves a browser UI to control the robot in real time
+- Runs entirely on a Raspberry Pi
 
-add the following:
+## Requirements
 
-```bash
-dtparam=i2c_arm=on
-dtoverlay=i2c1,pins_2_3
-```
+- The [kit](https://www.aliexpress.com/p/tesla-landing/index.html?UTABTest=aliabtest128998_32160&src=bing&albch=shopping&acnt=135105396&albcp=555690814&albag=1304022061862648&slnk=&trgt=pla-2333301113533049&plac=&crea=81501442626688&netw=s&device=c&mtctp=e&utm_source=Bing&utm_medium=shopping&utm_campaign=PA_Bing_%20GB_PMAX_9_MAXV__AESupply_26.1.23_hylt_1004266343&utm_content=AssetGroup_102125_153753&utm_term=Adeept%204WD%20Smart%20Robot%20Kit&msclkid=1ec982150c9413f981fdeb9da447c8bd&aff_fcid=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&aff_fsk=UneMJZVf&aff_platform=aaf&sk=UneMJZVf&aff_trace_key=11a13a589b4648c1abf47553a9a1844a-1770563799480-09519-UneMJZVf&terminal_id=4274b293fbe04386a62969acb4466e0d&scenario=c_ppc_item_bridge&productId=1005009982011552&_immersiveMode=true&withMainCard=true&OLP=1123114608_f_group1&o_s_id=1123114608)
+- Raspberry Pi 4 or newer
+- 64-bit Raspberry Pi OS
+- Rust installed on the Pi
 
-Install camera gstreamer:
+## Setup on Raspberry Pi
 
-```bash
-sudo apt install libcamera-apps gstreamer1.0-tools gstreamer1.0-libcamera
-```
+1. Install Rust
 
-Reboot the RPI
-
-```bash
-sudo reboot
-```
-
-## Mac setup
-
-Install Rust. WARNING do not install `Rust` via any other process than via `rustup` as the `cross` command will only work with `rustup` `Rust` installs.
-
-Get rid of Rust if installed with Homebrew
-
-```bash
-brew uninstall rust
-```
-
-Install Rust via Rustup
+Rust must be installed via rustup:
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh
 ```
 
-Install target (suitable for RPI 4 +)
+Make sure ~/.cargo/bin is in your PATH.
+
+---
+
+2. Build the project
+
+From the repo root:
 
 ```bash
-rustup target add aarch64-unknown-linux-gnu
+cargo build
 ```
 
-Install cross
+This compiles the robot binary directly on the Raspberry Pi in debug mode.
+
+---
+
+3. Run the robot
 
 ```bash
-cargo install cross --force --features docker-image
+sudo ./target/debug/hello_robot
 ```
 
-Setup env vars to deal with cross compilation deps. Add the following to your `.zshrc` or similar
+This starts the robot control service and the embedded web server.
+Open a browser on another device and connect to the Pi’s IP to interact with the UI.
+
+---
+
+## Web Interface
+
+Once the robot is running:
+
+- Visit `http://<pi-ip>:<port>` in a browser. e.g
 
 ```bash
-export PIGPIO_SYS_USE_PKG_CONFIG=1
-export PIGPIO_SYS_GENERATE_BINDINGS=0
+http://raspberrypi.local:3000
 ```
 
-## Build project
+- Use the UI to send commands to the robot
+- The interface is built with Preact (no-build mode) so standard HTML/CSS/JS served from within a Rust webserver.
 
-You must have the sysroot inplace (see above) before building your project.
+The static files live in the `static/` and `templates/` folders.
 
-```bash
-cross build --target aarch64-unknown-linux-gnu --release
+---
 
-```
+## Project structure
 
-## Copy program to the Raspberry PI
+- `src/` – Rust application source code
+- `static/` – Web UI assets (JS/CSS/images)
+- `templates/` – HTML templates for pages
+- `Cargo.toml` – Rust package config
 
-From your MacOS
+## License
 
-```bash
-scp target/aarch64-unknown-linux-gnu/release/<your-program> \
-    operator@raspberrypi.local:~
-```
-
-_(Change the RaspberryPI username and host and path if needed.)_
-
-## Send commands to ROS
-
-The Robot Operating System is listening on a Unix socket, so you can issue commands to it like so:
-
-```bash
-echo '{"type": "servo", "angle": 60}' | socat - UNIX-CONNECT:/tmp/robot.sock
-```
-
-Available commands:
-
-```bash
-{"type": "motor", "direction": "forward", "speed": 100}
-{"type": "servo", "angle": 60}
-{"type": "led", "r": 255, "g": 80, "b": 0}
-{"type": "camera", "command": "snap"}
-```
+MIT — see the `LICENSE` file.
